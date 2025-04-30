@@ -1,5 +1,8 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import Sidebar from '@/components/dashboard/Sidebar';
 import DataChart from '@/components/dashboard/DataChart';
 import DataTable from '@/components/dashboard/DataTable';
@@ -12,120 +15,76 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 
-// Dados de exemplo
-const surfistasData = [
-  { 
-    id: 1, 
-    nome: 'Carolina Silva', 
-    idade: 25, 
-    genero: 'Feminino', 
-    nivel: 'intermediário', 
-    pagamento: 'pago',
-    interesses: ['aulas-extras', 'fotografia']
-  },
-  { 
-    id: 2, 
-    nome: 'Marcos Santos', 
-    idade: 32, 
-    genero: 'Masculino', 
-    nivel: 'avançado', 
-    pagamento: 'pago',
-    interesses: ['yoga', 'fotografia']
-  },
-  { 
-    id: 3, 
-    nome: 'Júlia Lima', 
-    idade: 18, 
-    genero: 'Feminino', 
-    nivel: 'iniciante', 
-    pagamento: 'pendente',
-    interesses: ['aulas-extras']
-  },
-  { 
-    id: 4, 
-    nome: 'André Oliveira', 
-    idade: 28, 
-    genero: 'Masculino', 
-    nivel: 'intermediário', 
-    pagamento: 'pago',
-    interesses: ['fotografia', 'meditação']
-  },
-  { 
-    id: 5, 
-    nome: 'Fernanda Costa', 
-    idade: 22, 
-    genero: 'Feminino', 
-    nivel: 'iniciante', 
-    pagamento: 'pendente',
-    interesses: ['yoga', 'aulas-extras']
-  },
-  { 
-    id: 6, 
-    nome: 'Pedro Alves', 
-    idade: 35, 
-    genero: 'Masculino', 
-    nivel: 'avançado', 
-    pagamento: 'pago',
-    interesses: ['fotografia', 'competição']
-  },
-  { 
-    id: 7, 
-    nome: 'Beatriz Mendes', 
-    idade: 27, 
-    genero: 'Feminino', 
-    nivel: 'intermediário', 
-    pagamento: 'pendente',
-    interesses: ['yoga', 'meditação']
-  },
-  { 
-    id: 8, 
-    nome: 'Lucas Souza', 
-    idade: 30, 
-    genero: 'Masculino', 
-    nivel: 'intermediário', 
-    pagamento: 'pago',
-    interesses: ['aulas-extras', 'competição']
-  },
-];
+// Tipo para surfistas
+type Surfista = {
+  id: string;
+  nome_surfista: string;
+  data_nascimento: string;
+  tem_instagram: boolean;
+  arroba_instagram: string | null;
+  escola_serie_ano: string;
+  tamanho_camiseta_surfista: string;
+  toca_instrumento: boolean;
+  instrumento_qual: string | null;
+  tem_irmaos: boolean;
+  quantidade_irmaos: number | null;
+  toma_medicamento_continuo: boolean;
+  medicamento_qual: string | null;
+  tem_alergia: boolean;
+  alergia_qual: string | null;
+  tem_fobia: boolean;
+  fobia_qual: string | null;
+  fez_crisma: boolean;
+  fez_primeira_comunhao: boolean;
+};
 
-// Dados para gráficos
-const nivelData = [
-  { name: 'Iniciante', value: 25 },
-  { name: 'Intermediário', value: 40 },
-  { name: 'Avançado', value: 15 },
-];
-
-const generoData = [
-  { name: 'Feminino', value: 35 },
-  { name: 'Masculino', value: 45 },
-];
-
-const idadeData = [
-  { name: 'Até 18', value: 10 },
-  { name: '19-25', value: 25 },
-  { name: '26-35', value: 30 },
-  { name: '36+', value: 15 },
-];
-
-const pagamentoData = [
-  { name: 'Pago', value: 60 },
-  { name: 'Pendente', value: 20 },
-];
-
-const interessesData = [
-  { name: 'Aulas Extras', value: 40 },
-  { name: 'Fotografia', value: 35 },
-  { name: 'Yoga', value: 25 },
-  { name: 'Meditação', value: 20 },
-  { name: 'Competição', value: 15 },
-];
+// Função para calcular a idade a partir da data de nascimento
+const calcularIdade = (dataNascimento: string): number => {
+  const hoje = new Date();
+  const dataNasc = new Date(dataNascimento);
+  let idade = hoje.getFullYear() - dataNasc.getFullYear();
+  const m = hoje.getMonth() - dataNasc.getMonth();
+  
+  if (m < 0 || (m === 0 && hoje.getDate() < dataNasc.getDate())) {
+    idade--;
+  }
+  
+  return idade;
+};
 
 const Surfistas = () => {
+  const { toast } = useToast();
   const [filtros, setFiltros] = useState({
     nivel: [] as string[],
     genero: [] as string[],
     pagamento: [] as string[],
     interesses: [] as string[],
+  });
+
+  const fetchSurfistas = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('fichas_surfistas')
+        .select('*')
+        .order('nome_surfista', { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar surfistas:', error);
+      toast({
+        title: "Erro ao carregar dados",
+        description: "Não foi possível carregar os surfistas.",
+        variant: "destructive"
+      });
+      return [];
+    }
+  };
+
+  // Buscar dados com React Query
+  const { data: surfistas, isLoading } = useQuery({
+    queryKey: ['surfistas'],
+    queryFn: fetchSurfistas
   });
   
   // Função para atualizar filtros
@@ -145,69 +104,109 @@ const Surfistas = () => {
       }
     });
   };
+
+  // Dados processados para exibição
+  const dadosProcessados = surfistas?.map(surfista => ({
+    ...surfista,
+    idade: calcularIdade(surfista.data_nascimento),
+  })) || [];
   
-  // Aplicar filtros aos dados
-  const dadosFiltrados = surfistasData.filter(surfista => {
-    // Se não há filtros para uma categoria, não filtra por ela
-    const filtroPorNivel = filtros.nivel.length === 0 || filtros.nivel.includes(surfista.nivel);
-    const filtroPorGenero = filtros.genero.length === 0 || filtros.genero.includes(surfista.genero);
-    const filtroPorPagamento = filtros.pagamento.length === 0 || filtros.pagamento.includes(surfista.pagamento);
-    const filtroPorInteresses = filtros.interesses.length === 0 || 
-      filtros.interesses.some(interesse => surfista.interesses.includes(interesse));
+  // Gráficos
+  const getFaixaEtaria = () => {
+    if (!dadosProcessados.length) return [];
     
-    return filtroPorNivel && filtroPorGenero && filtroPorPagamento && filtroPorInteresses;
-  });
+    const faixas = {
+      'Até 10': 0,
+      '11-14': 0,
+      '15-17': 0,
+      '18+': 0
+    };
+    
+    dadosProcessados.forEach(surfista => {
+      const idade = surfista.idade;
+      if (idade <= 10) faixas['Até 10']++;
+      else if (idade <= 14) faixas['11-14']++;
+      else if (idade <= 17) faixas['15-17']++;
+      else faixas['18+']++;
+    });
+    
+    return Object.entries(faixas).map(([name, value]) => ({ name, value }));
+  };
+  
+  const getComunhaoCrisma = () => {
+    if (!dadosProcessados.length) return [];
+    
+    const ambos = dadosProcessados.filter(s => s.fez_primeira_comunhao && s.fez_crisma).length;
+    const soComunhao = dadosProcessados.filter(s => s.fez_primeira_comunhao && !s.fez_crisma).length;
+    const soCrisma = dadosProcessados.filter(s => !s.fez_primeira_comunhao && s.fez_crisma).length;
+    const nenhum = dadosProcessados.filter(s => !s.fez_primeira_comunhao && !s.fez_crisma).length;
+    
+    return [
+      { name: 'Ambos', value: ambos },
+      { name: 'Só Comunhão', value: soComunhao },
+      { name: 'Só Crisma', value: soCrisma },
+      { name: 'Nenhum', value: nenhum }
+    ];
+  };
+  
+  const getInteresses = () => {
+    if (!dadosProcessados.length) return [];
+    
+    const tocaInstrumento = dadosProcessados.filter(s => s.toca_instrumento).length;
+    const temAlergia = dadosProcessados.filter(s => s.tem_alergia).length;
+    const tomaMedicamento = dadosProcessados.filter(s => s.toma_medicamento_continuo).length;
+    const temFobia = dadosProcessados.filter(s => s.tem_fobia).length;
+    
+    return [
+      { name: 'Toca Instrumento', value: tocaInstrumento },
+      { name: 'Tem Alergia', value: temAlergia },
+      { name: 'Toma Medicamento', value: tomaMedicamento },
+      { name: 'Tem Fobia', value: temFobia }
+    ];
+  };
   
   // Opções de filtro para o dropdown
   const FiltersComponent = (
     <>
       <DropdownMenuItem className="flex flex-col items-start">
-        <h4 className="font-semibold mb-1">Nível</h4>
+        <h4 className="font-semibold mb-1">Toca Instrumento</h4>
         <div className="space-y-1">
           <div className="flex items-center space-x-2">
             <Checkbox
-              id="filter-nivel-iniciante"
-              checked={filtros.nivel.includes('iniciante')}
-              onCheckedChange={() => updateFiltro('nivel', 'iniciante')}
+              id="filter-instrumento-sim"
+              checked={filtros.interesses.includes('instrumento-sim')}
+              onCheckedChange={() => updateFiltro('interesses', 'instrumento-sim')}
             />
-            <Label htmlFor="filter-nivel-iniciante">Iniciante</Label>
+            <Label htmlFor="filter-instrumento-sim">Sim</Label>
           </div>
           <div className="flex items-center space-x-2">
             <Checkbox
-              id="filter-nivel-intermediario"
-              checked={filtros.nivel.includes('intermediário')}
-              onCheckedChange={() => updateFiltro('nivel', 'intermediário')}
+              id="filter-instrumento-nao"
+              checked={filtros.interesses.includes('instrumento-nao')}
+              onCheckedChange={() => updateFiltro('interesses', 'instrumento-nao')}
             />
-            <Label htmlFor="filter-nivel-intermediario">Intermediário</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="filter-nivel-avancado"
-              checked={filtros.nivel.includes('avançado')}
-              onCheckedChange={() => updateFiltro('nivel', 'avançado')}
-            />
-            <Label htmlFor="filter-nivel-avancado">Avançado</Label>
+            <Label htmlFor="filter-instrumento-nao">Não</Label>
           </div>
         </div>
       </DropdownMenuItem>
       <DropdownMenuItem className="flex flex-col items-start mt-2">
-        <h4 className="font-semibold mb-1">Pagamento</h4>
+        <h4 className="font-semibold mb-1">Comunhão e Crisma</h4>
         <div className="space-y-1">
           <div className="flex items-center space-x-2">
             <Checkbox
-              id="filter-pagamento-pago"
-              checked={filtros.pagamento.includes('pago')}
-              onCheckedChange={() => updateFiltro('pagamento', 'pago')}
+              id="filter-comunhao"
+              checked={filtros.interesses.includes('comunhao')}
+              onCheckedChange={() => updateFiltro('interesses', 'comunhao')}
             />
-            <Label htmlFor="filter-pagamento-pago">Pago</Label>
+            <Label htmlFor="filter-comunhao">Fez Comunhão</Label>
           </div>
           <div className="flex items-center space-x-2">
             <Checkbox
-              id="filter-pagamento-pendente"
-              checked={filtros.pagamento.includes('pendente')}
-              onCheckedChange={() => updateFiltro('pagamento', 'pendente')}
+              id="filter-crisma"
+              checked={filtros.interesses.includes('crisma')}
+              onCheckedChange={() => updateFiltro('interesses', 'crisma')}
             />
-            <Label htmlFor="filter-pagamento-pendente">Pendente</Label>
+            <Label htmlFor="filter-crisma">Fez Crisma</Label>
           </div>
         </div>
       </DropdownMenuItem>
@@ -228,9 +227,23 @@ const Surfistas = () => {
     </>
   );
   
+  // Aplicar filtros
+  const dadosFiltrados = dadosProcessados.filter(surfista => {
+    // Filtrar por interesses
+    if (filtros.interesses.includes('instrumento-sim') && !surfista.toca_instrumento) return false;
+    if (filtros.interesses.includes('instrumento-nao') && surfista.toca_instrumento) return false;
+    if (filtros.interesses.includes('comunhao') && !surfista.fez_primeira_comunhao) return false;
+    if (filtros.interesses.includes('crisma') && !surfista.fez_crisma) return false;
+    
+    return true;
+  });
+  
   // Função para exportar
   const handleExport = (format: 'csv' | 'pdf') => {
-    alert(`Exportando lista de surfistas em formato ${format}`);
+    toast({
+      title: `Exportando em formato ${format.toUpperCase()}`,
+      description: "Arquivo sendo gerado para download",
+    });
     // Implementação real da exportação seria feita aqui
   };
 
@@ -259,52 +272,33 @@ const Surfistas = () => {
                 <CardTitle>Visão Geral de Surfistas</CardTitle>
                 <div className="flex items-center space-x-2">
                   <Waves className="h-5 w-5 text-ocean-600" />
-                  <span className="font-medium">Total: 80 surfistas</span>
+                  <span className="font-medium">Total: {surfistas?.length || 0} surfistas</span>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="nivel">
-                <TabsList className="grid grid-cols-5 mb-6">
-                  <TabsTrigger value="nivel">Nível</TabsTrigger>
-                  <TabsTrigger value="genero">Gênero</TabsTrigger>
+              <Tabs defaultValue="idade">
+                <TabsList className="grid grid-cols-3 mb-6">
                   <TabsTrigger value="idade">Idade</TabsTrigger>
-                  <TabsTrigger value="pagamento">Pagamento</TabsTrigger>
+                  <TabsTrigger value="comunhao-crisma">Comunhão/Crisma</TabsTrigger>
                   <TabsTrigger value="interesses">Interesses</TabsTrigger>
                 </TabsList>
-                
-                <TabsContent value="nivel">
-                  <DataChart 
-                    type="pie" 
-                    title="" 
-                    data={nivelData} 
-                    colors={['#38bdf8', '#0ea5e9', '#0369a1']}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="genero">
-                  <DataChart 
-                    type="pie" 
-                    title="" 
-                    data={generoData} 
-                    colors={['#f472b6', '#0369a1']}
-                  />
-                </TabsContent>
                 
                 <TabsContent value="idade">
                   <DataChart 
                     type="bar" 
                     title="" 
-                    data={idadeData}
+                    data={getFaixaEtaria()} 
+                    colors={['#38bdf8', '#0ea5e9', '#0369a1', '#075985']}
                   />
                 </TabsContent>
                 
-                <TabsContent value="pagamento">
+                <TabsContent value="comunhao-crisma">
                   <DataChart 
                     type="pie" 
                     title="" 
-                    data={pagamentoData} 
-                    colors={['#10b981', '#f97316']}
+                    data={getComunhaoCrisma()} 
+                    colors={['#10b981', '#0369a1', '#f472b6', '#f97316']}
                   />
                 </TabsContent>
                 
@@ -312,7 +306,8 @@ const Surfistas = () => {
                   <DataChart 
                     type="bar" 
                     title="" 
-                    data={interessesData}
+                    data={getInteresses()}
+                    colors={['#38bdf8', '#f97316', '#10b981', '#f43f5e']}
                   />
                 </TabsContent>
               </Tabs>
@@ -320,60 +315,60 @@ const Surfistas = () => {
           </Card>
           
           <div className="mb-6">
-            <DataTable 
-              title="Lista de Surfistas"
-              data={dadosFiltrados}
-              columns={[
-                { accessor: 'nome', header: 'Nome' },
-                { accessor: 'idade', header: 'Idade' },
-                { accessor: 'genero', header: 'Gênero' },
-                { 
-                  accessor: 'nivel', 
-                  header: 'Nível',
-                  cell: (value) => {
-                    let cor = '';
-                    if (value === 'iniciante') cor = 'bg-ocean-200 text-ocean-800';
-                    if (value === 'intermediário') cor = 'bg-ocean-500 text-white';
-                    if (value === 'avançado') cor = 'bg-ocean-800 text-white';
-                    
-                    return (
-                      <Badge variant="outline" className={cor}>
-                        {value.charAt(0).toUpperCase() + value.slice(1)}
+            {isLoading ? (
+              <div className="flex justify-center p-8">
+                <p>Carregando dados...</p>
+              </div>
+            ) : (
+              <DataTable 
+                title="Lista de Surfistas"
+                data={dadosFiltrados}
+                columns={[
+                  { accessor: 'nome_surfista', header: 'Nome' },
+                  { accessor: 'idade', header: 'Idade' },
+                  { 
+                    accessor: 'tamanho_camiseta_surfista', 
+                    header: 'Camiseta',
+                    cell: (value) => (
+                      <Badge variant="outline" className="bg-ocean-50 text-ocean-800">
+                        {value}
                       </Badge>
-                    );
-                  }
-                },
-                { 
-                  accessor: 'pagamento', 
-                  header: 'Pagamento',
-                  cell: (value) => {
-                    return value === 'pago' ? (
+                    )
+                  },
+                  { 
+                    accessor: 'escola_serie_ano', 
+                    header: 'Escola/Série',
+                  },
+                  { 
+                    accessor: 'fez_primeira_comunhao', 
+                    header: 'Comunhão',
+                    cell: (value) => value ? (
                       <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                        <Check className="mr-1 h-3 w-3" /> Pago
+                        <Check className="mr-1 h-3 w-3" /> Sim
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="text-orange-500">
-                        Pendente
+                        Não
                       </Badge>
-                    );
-                  }
-                },
-                { 
-                  accessor: 'interesses', 
-                  header: 'Interesses',
-                  cell: (value) => (
-                    <div className="flex flex-wrap gap-1">
-                      {value.map((interesse: string, idx: number) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
-                          {interesse.replace('-', ' ')}
-                        </Badge>
-                      ))}
-                    </div>
-                  )
-                },
-              ]}
-              filters={FiltersComponent}
-            />
+                    )
+                  },
+                  { 
+                    accessor: 'fez_crisma', 
+                    header: 'Crisma',
+                    cell: (value) => value ? (
+                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                        <Check className="mr-1 h-3 w-3" /> Sim
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-orange-500">
+                        Não
+                      </Badge>
+                    )
+                  },
+                ]}
+                filters={FiltersComponent}
+              />
+            )}
           </div>
         </main>
       </div>

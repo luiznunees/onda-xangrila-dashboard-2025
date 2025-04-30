@@ -1,5 +1,7 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import Sidebar from "@/components/dashboard/Sidebar";
 import DataChart from "@/components/dashboard/DataChart";
 import DataTable from "@/components/dashboard/DataTable";
@@ -8,50 +10,95 @@ import { UserPlus, TrendingUp, UserCheck } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { useQuery } from "@tanstack/react-query";
 
-// Dados de exemplo para pré-inscrições
-const mockData = [
-  { id: 1, nome: "Ana Silva", email: "ana@email.com", telefone: "(51) 91234-5678", interesse: "surfista", dataInscricao: "2025-05-01" },
-  { id: 2, nome: "João Santos", email: "joao@email.com", telefone: "(51) 92345-6789", interesse: "apoio", dataInscricao: "2025-05-05" },
-  { id: 3, nome: "Maria Oliveira", email: "maria@email.com", telefone: "(51) 93456-7890", interesse: "marujo", dataInscricao: "2025-05-10" },
-  { id: 4, nome: "Pedro Costa", email: "pedro@email.com", telefone: "(51) 94567-8901", interesse: "surfista", dataInscricao: "2025-05-12" },
-  { id: 5, nome: "Carla Martins", email: "carla@email.com", telefone: "(51) 95678-9012", interesse: "surfista", dataInscricao: "2025-05-15" },
-  { id: 6, nome: "Lucas Mendes", email: "lucas@email.com", telefone: "(51) 96789-0123", interesse: "apoio", dataInscricao: "2025-05-18" },
-  { id: 7, nome: "Julia Lima", email: "julia@email.com", telefone: "(51) 97890-1234", interesse: "marujo", dataInscricao: "2025-05-20" },
-  { id: 8, nome: "Rafael Alves", email: "rafael@email.com", telefone: "(51) 98901-2345", interesse: "surfista", dataInscricao: "2025-05-22" },
-  { id: 9, nome: "Fernanda Sousa", email: "fernanda@email.com", telefone: "(51) 99012-3456", interesse: "surfista", dataInscricao: "2025-05-25" },
-  { id: 10, nome: "Bruno Castro", email: "bruno@email.com", telefone: "(51) 90123-4567", interesse: "apoio", dataInscricao: "2025-05-28" },
-];
-
-// Dados para o gráfico de tendência
-const tendenciaData = [
-  { name: '01/05', inscricoes: 3 },
-  { name: '08/05', inscricoes: 8 },
-  { name: '15/05', inscricoes: 12 },
-  { name: '22/05', inscricoes: 18 },
-  { name: '29/05', inscricoes: 25 },
-  { name: '05/06', inscricoes: 38 },
-  { name: '12/06', inscricoes: 50 },
-];
-
-// Dados para o gráfico de distribuição
-const distribuicaoData = [
-  { name: 'Surfistas', value: 80 },
-  { name: 'Apoio', value: 40 },
-  { name: 'Marujos', value: 30 },
-];
+// Tipo para pré-inscrições
+type PreInscricao = {
+  id: string;
+  nome_completo: string;
+  idade: number;
+  cidade: string;
+  bairro: string;
+  nome_responsavel: string;
+  telefone_responsavel: string;
+  created_at: string;
+};
 
 const PreInscricoes = () => {
+  const { toast } = useToast();
   const [filtroInteresse, setFiltroInteresse] = useState<string | null>(null);
   
-  // Filtro para a tabela
-  const filteredData = filtroInteresse 
-    ? mockData.filter(item => item.interesse === filtroInteresse)
-    : mockData;
+  const fetchPreInscricoes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('pre_inscricoes')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar pré-inscrições:', error);
+      toast({
+        title: "Erro ao carregar dados",
+        description: "Não foi possível carregar as pré-inscrições.",
+        variant: "destructive"
+      });
+      return [];
+    }
+  };
+  
+  // Buscar dados com React Query
+  const { data: preInscricoes, isLoading } = useQuery({
+    queryKey: ['preInscricoes'],
+    queryFn: fetchPreInscricoes
+  });
+  
+  // Dados para o gráfico de tendência por mês
+  const getTendenciaPorMes = () => {
+    if (!preInscricoes) return [];
+    
+    const inscricoesPorMes = new Map<string, number>();
+    
+    preInscricoes.forEach((inscricao) => {
+      // Extrair mês e ano da data de criação
+      const data = new Date(inscricao.created_at);
+      const mesAno = `${data.getMonth() + 1}/${data.getFullYear().toString().substr(-2)}`;
+      
+      inscricoesPorMes.set(mesAno, (inscricoesPorMes.get(mesAno) || 0) + 1);
+    });
+    
+    // Ordenar por mês
+    return Array.from(inscricoesPorMes.entries())
+      .sort((a, b) => {
+        const [mesA, anoA] = a[0].split('/');
+        const [mesB, anoB] = b[0].split('/');
+        return anoA === anoB ? parseInt(mesA) - parseInt(mesB) : anoA.localeCompare(anoB);
+      })
+      .map(([name, inscricoes]) => ({ name, inscricoes }));
+  };
+  
+  // Dados para o gráfico de distribuição por cidade
+  const getDistribuicaoPorCidade = () => {
+    if (!preInscricoes) return [];
+    
+    const cidadesCount = new Map<string, number>();
+    
+    preInscricoes.forEach((inscricao) => {
+      cidadesCount.set(inscricao.cidade, (cidadesCount.get(inscricao.cidade) || 0) + 1);
+    });
+    
+    return Array.from(cidadesCount.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  };
   
   // Função para exportação
   const handleExport = (format: 'csv' | 'pdf') => {
-    alert(`Exportando pré-inscrições em formato ${format}`);
+    toast({
+      title: `Exportando em formato ${format.toUpperCase()}`,
+      description: "Arquivo sendo gerado para download",
+    });
     // Implementar a exportação real posteriormente
   };
   
@@ -59,19 +106,20 @@ const PreInscricoes = () => {
   const FiltersComponent = (
     <>
       <DropdownMenuItem onClick={() => setFiltroInteresse(null)}>
-        Todos os interesses
+        Todas as cidades
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => setFiltroInteresse('surfista')}>
-        Somente Surfistas
-      </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => setFiltroInteresse('apoio')}>
-        Somente Apoio
-      </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => setFiltroInteresse('marujo')}>
-        Somente Marujos
-      </DropdownMenuItem>
+      {getDistribuicaoPorCidade().slice(0, 5).map(cidade => (
+        <DropdownMenuItem key={cidade.name} onClick={() => setFiltroInteresse(cidade.name)}>
+          Somente {cidade.name}
+        </DropdownMenuItem>
+      ))}
     </>
   );
+
+  // Filtro para a tabela
+  const filteredData = filtroInteresse 
+    ? preInscricoes?.filter(item => item.cidade === filtroInteresse)
+    : preInscricoes;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -83,21 +131,21 @@ const PreInscricoes = () => {
           <div className="grid gap-4 md:grid-cols-3 mb-6">
             <StatsCard 
               title="Total de Pré-Inscrições" 
-              value={150}
+              value={preInscricoes?.length || 0}
               icon={<UserPlus className="h-4 w-4" />}
               description="Todas as pessoas interessadas no retiro"
             />
             <StatsCard 
-              title="Crescimento Semanal" 
-              value="12%"
+              title="Média de Idade" 
+              value={preInscricoes?.reduce((acc, curr) => acc + curr.idade, 0) / (preInscricoes?.length || 1) || 0}
               icon={<TrendingUp className="h-4 w-4" />}
-              description="Aumento nas últimas 7 dias"
+              description="Média de idade dos pré-inscritos"
             />
             <StatsCard 
-              title="Taxa de Conversão" 
-              value="53%"
+              title="Cidades Diferentes" 
+              value={new Set(preInscricoes?.map(item => item.cidade)).size || 0}
               icon={<UserCheck className="h-4 w-4" />}
-              description="De pré-inscritos para inscritos"
+              description="Número de cidades representadas"
             />
           </div>
           
@@ -105,45 +153,45 @@ const PreInscricoes = () => {
             <DataChart 
               type="line"
               title="Tendência de Pré-Inscrições"
-              data={tendenciaData}
+              data={getTendenciaPorMes()}
               dataKey="inscricoes"
               nameKey="name"
             />
             
             <DataChart 
               type="pie"
-              title="Distribuição por Interesse"
-              data={distribuicaoData}
-              colors={['#0369a1', '#38bdf8', '#f97316']}
+              title="Distribuição por Cidade"
+              data={getDistribuicaoPorCidade()}
+              colors={['#0369a1', '#38bdf8', '#f97316', '#14b8a6', '#f43f5e']}
             />
           </div>
           
           <div className="mb-6">
-            <DataTable 
-              title="Lista de Pré-Inscrições"
-              data={filteredData}
-              columns={[
-                { accessor: 'nome', header: 'Nome' },
-                { accessor: 'email', header: 'Email' },
-                { accessor: 'telefone', header: 'Telefone' },
-                { 
-                  accessor: 'interesse', 
-                  header: 'Interesse',
-                  cell: (value) => (
-                    <span className={
-                      value === 'surfista' ? 'text-ocean-600' :
-                      value === 'apoio' ? 'text-sand-600' :
-                      'text-sunset-600'
-                    }>
-                      {value.charAt(0).toUpperCase() + value.slice(1)}
-                    </span>
-                  )
-                },
-                { accessor: 'dataInscricao', header: 'Data' }
-              ]}
-              onExport={handleExport}
-              filters={FiltersComponent}
-            />
+            {isLoading ? (
+              <div className="flex justify-center p-8">
+                <p>Carregando dados...</p>
+              </div>
+            ) : (
+              <DataTable 
+                title="Lista de Pré-Inscrições"
+                data={filteredData || []}
+                columns={[
+                  { accessor: 'nome_completo', header: 'Nome' },
+                  { accessor: 'idade', header: 'Idade' },
+                  { accessor: 'cidade', header: 'Cidade' },
+                  { accessor: 'bairro', header: 'Bairro' },
+                  { accessor: 'nome_responsavel', header: 'Responsável' },
+                  { accessor: 'telefone_responsavel', header: 'Telefone' },
+                  { 
+                    accessor: 'created_at', 
+                    header: 'Data de Inscrição',
+                    cell: (value) => new Date(value).toLocaleDateString('pt-BR')
+                  }
+                ]}
+                onExport={handleExport}
+                filters={FiltersComponent}
+              />
+            )}
           </div>
         </main>
       </div>
