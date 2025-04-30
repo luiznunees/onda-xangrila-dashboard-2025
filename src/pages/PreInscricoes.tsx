@@ -1,16 +1,16 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import Sidebar from "@/components/dashboard/Sidebar";
 import DataChart from "@/components/dashboard/DataChart";
 import DataTable from "@/components/dashboard/DataTable";
 import StatsCard from "@/components/dashboard/StatsCard";
-import { UserPlus, TrendingUp, UserCheck } from "lucide-react";
+import { UserPlus, TrendingUp, UserCheck, Check, X } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useQuery } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
 
 // Tipo para pré-inscrições
 type PreInscricao = {
@@ -121,6 +121,21 @@ const PreInscricoes = () => {
     ? preInscricoes?.filter(item => item.cidade === filtroInteresse)
     : preInscricoes;
 
+  // Definição dos campos de detalhe para o DataTable
+  const detailFields = [
+    { label: "Nome Completo", accessor: "nome_completo" },
+    { label: "Idade", accessor: "idade" },
+    { label: "Cidade", accessor: "cidade" },
+    { label: "Bairro", accessor: "bairro" },
+    { label: "Nome do Responsável", accessor: "nome_responsavel" },
+    { label: "Telefone do Responsável", accessor: "telefone_responsavel" },
+    { 
+      label: "Data de Inscrição", 
+      accessor: "created_at",
+      render: (value) => new Date(value).toLocaleDateString('pt-BR')
+    }
+  ];
+
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
@@ -137,7 +152,7 @@ const PreInscricoes = () => {
             />
             <StatsCard 
               title="Média de Idade" 
-              value={preInscricoes?.reduce((acc, curr) => acc + curr.idade, 0) / (preInscricoes?.length || 1) || 0}
+              value={Math.round(preInscricoes?.reduce((acc, curr) => acc + curr.idade, 0) / (preInscricoes?.length || 1)) || 0}
               icon={<TrendingUp className="h-4 w-4" />}
               description="Média de idade dos pré-inscritos"
             />
@@ -176,18 +191,18 @@ const PreInscricoes = () => {
                 title="Lista de Pré-Inscrições"
                 data={filteredData || []}
                 columns={[
-                  { accessor: 'nome_completo', header: 'Nome' },
-                  { accessor: 'idade', header: 'Idade' },
-                  { accessor: 'cidade', header: 'Cidade' },
-                  { accessor: 'bairro', header: 'Bairro' },
-                  { accessor: 'nome_responsavel', header: 'Responsável' },
-                  { accessor: 'telefone_responsavel', header: 'Telefone' },
+                  { accessor: 'nome_completo', header: 'Nome', isCompact: true },
+                  { accessor: 'idade', header: 'Idade', isCompact: true },
+                  { accessor: 'cidade', header: 'Cidade', isCompact: true },
+                  { accessor: 'telefone_responsavel', header: 'Telefone', isCompact: true },
                   { 
                     accessor: 'created_at', 
                     header: 'Data de Inscrição',
-                    cell: (value) => new Date(value).toLocaleDateString('pt-BR')
+                    cell: (value) => new Date(value).toLocaleDateString('pt-BR'),
+                    isCompact: true
                   }
                 ]}
+                detailFields={detailFields}
                 onExport={handleExport}
                 filters={FiltersComponent}
               />
