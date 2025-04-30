@@ -20,7 +20,9 @@ import {
   UtensilsCrossed, 
   Music, 
   Users, 
-  SunMoon 
+  SunMoon,
+  Calendar,
+  Info
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 

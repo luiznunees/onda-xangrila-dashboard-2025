@@ -5,7 +5,7 @@ import StatsCard from "@/components/dashboard/StatsCard";
 import CountdownTimer from "@/components/dashboard/CountdownTimer";
 import DataChart from "@/components/dashboard/DataChart";
 import Sidebar from "@/components/dashboard/Sidebar";
-import { User, Users, Surf, LifeBuoy } from "lucide-react";
+import { User, Users, Waves, LifeBuoy } from "lucide-react";
 
 // Dados de exemplo
 const summaryData = [
@@ -44,7 +44,7 @@ const Dashboard = () => {
             <StatsCard 
               title="Surfistas" 
               value={80} 
-              icon={<Surf className="h-4 w-4" />}
+              icon={<Waves className="h-4 w-4" />}
               trend={{ value: 10, isPositive: true }}
             />
             <StatsCard 

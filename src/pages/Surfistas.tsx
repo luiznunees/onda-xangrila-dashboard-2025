@@ -6,7 +6,7 @@ import DataTable from '@/components/dashboard/DataTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Check, Surf, Filter, Download } from 'lucide-react';
+import { Check, Waves, Filter, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -258,7 +258,7 @@ const Surfistas = () => {
               <div className="flex justify-between items-center">
                 <CardTitle>Visão Geral de Surfistas</CardTitle>
                 <div className="flex items-center space-x-2">
-                  <Surf className="h-5 w-5 text-ocean-600" />
+                  <Waves className="h-5 w-5 text-ocean-600" />
                   <span className="font-medium">Total: 80 surfistas</span>
                 </div>
               </div>
