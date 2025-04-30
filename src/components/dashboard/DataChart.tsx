@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, LineChart, PieChart } from "@/components/ui/chart";
+import { BarChart, LineChart, PieChart } from "@/components/ui/charts";
 import { cn } from "@/lib/utils";
 
 interface DataChartProps {
