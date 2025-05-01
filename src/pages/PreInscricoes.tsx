@@ -1,16 +1,11 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import Sidebar from "@/components/dashboard/Sidebar";
-import DataChart from "@/components/dashboard/DataChart";
-import DataTable from "@/components/dashboard/DataTable";
 import StatsCard from "@/components/dashboard/StatsCard";
-import { UserPlus, TrendingUp, UserCheck, Check, X } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { useQuery } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/badge";
+import DataTable from "@/components/dashboard/DataTable";
+import { UserPlus, TrendingUp, UserCheck } from "lucide-react";
 
 // Tipo para pré-inscrições
 type PreInscricao = {
@@ -26,7 +21,6 @@ type PreInscricao = {
 
 const PreInscricoes = () => {
   const { toast } = useToast();
-  const [filtroInteresse, setFiltroInteresse] = useState<string | null>(null);
   
   const fetchPreInscricoes = async () => {
     try {
@@ -49,48 +43,32 @@ const PreInscricoes = () => {
   };
   
   // Buscar dados com React Query
-  const { data: preInscricoes, isLoading } = useQuery({
+  const { data: preInscricoes, isLoading, refetch } = useQuery({
     queryKey: ['preInscricoes'],
     queryFn: fetchPreInscricoes
   });
   
-  // Dados para o gráfico de tendência por mês
-  const getTendenciaPorMes = () => {
-    if (!preInscricoes) return [];
-    
-    const inscricoesPorMes = new Map<string, number>();
-    
-    preInscricoes.forEach((inscricao) => {
-      // Extrair mês e ano da data de criação
-      const data = new Date(inscricao.created_at);
-      const mesAno = `${data.getMonth() + 1}/${data.getFullYear().toString().substr(-2)}`;
+  // Função para exclusão
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('pre_inscricoes')
+        .delete()
+        .eq('id', id);
       
-      inscricoesPorMes.set(mesAno, (inscricoesPorMes.get(mesAno) || 0) + 1);
-    });
-    
-    // Ordenar por mês
-    return Array.from(inscricoesPorMes.entries())
-      .sort((a, b) => {
-        const [mesA, anoA] = a[0].split('/');
-        const [mesB, anoB] = b[0].split('/');
-        return anoA === anoB ? parseInt(mesA) - parseInt(mesB) : anoA.localeCompare(anoB);
-      })
-      .map(([name, inscricoes]) => ({ name, inscricoes }));
-  };
-  
-  // Dados para o gráfico de distribuição por cidade
-  const getDistribuicaoPorCidade = () => {
-    if (!preInscricoes) return [];
-    
-    const cidadesCount = new Map<string, number>();
-    
-    preInscricoes.forEach((inscricao) => {
-      cidadesCount.set(inscricao.cidade, (cidadesCount.get(inscricao.cidade) || 0) + 1);
-    });
-    
-    return Array.from(cidadesCount.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
+      if (error) throw error;
+      
+      // Recarregar os dados após exclusão
+      refetch();
+    } catch (error) {
+      console.error('Erro ao excluir pré-inscrição:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir a pré-inscrição.",
+        variant: "destructive"
+      });
+      throw error;
+    }
   };
   
   // Função para exportação
@@ -101,25 +79,6 @@ const PreInscricoes = () => {
     });
     // Implementar a exportação real posteriormente
   };
-  
-  // Componente de filtros para a tabela
-  const FiltersComponent = (
-    <>
-      <DropdownMenuItem onClick={() => setFiltroInteresse(null)}>
-        Todas as cidades
-      </DropdownMenuItem>
-      {getDistribuicaoPorCidade().slice(0, 5).map(cidade => (
-        <DropdownMenuItem key={cidade.name} onClick={() => setFiltroInteresse(cidade.name)}>
-          Somente {cidade.name}
-        </DropdownMenuItem>
-      ))}
-    </>
-  );
-
-  // Filtro para a tabela
-  const filteredData = filtroInteresse 
-    ? preInscricoes?.filter(item => item.cidade === filtroInteresse)
-    : preInscricoes;
 
   // Definição dos campos de detalhe para o DataTable
   const detailFields = [
@@ -164,23 +123,6 @@ const PreInscricoes = () => {
             />
           </div>
           
-          <div className="grid gap-6 md:grid-cols-2 mb-6">
-            <DataChart 
-              type="line"
-              title="Tendência de Pré-Inscrições"
-              data={getTendenciaPorMes()}
-              dataKey="inscricoes"
-              nameKey="name"
-            />
-            
-            <DataChart 
-              type="pie"
-              title="Distribuição por Cidade"
-              data={getDistribuicaoPorCidade()}
-              colors={['#0369a1', '#38bdf8', '#f97316', '#14b8a6', '#f43f5e']}
-            />
-          </div>
-          
           <div className="mb-6">
             {isLoading ? (
               <div className="flex justify-center p-8">
@@ -189,22 +131,21 @@ const PreInscricoes = () => {
             ) : (
               <DataTable 
                 title="Lista de Pré-Inscrições"
-                data={filteredData || []}
+                data={preInscricoes || []}
                 columns={[
-                  { accessor: 'nome_completo', header: 'Nome', isCompact: true },
-                  { accessor: 'idade', header: 'Idade', isCompact: true },
-                  { accessor: 'cidade', header: 'Cidade', isCompact: true },
-                  { accessor: 'telefone_responsavel', header: 'Telefone', isCompact: true },
+                  { accessor: 'nome_completo', header: 'Nome' },
+                  { accessor: 'idade', header: 'Idade' },
+                  { accessor: 'cidade', header: 'Cidade' },
+                  { accessor: 'telefone_responsavel', header: 'Telefone' },
                   { 
                     accessor: 'created_at', 
                     header: 'Data de Inscrição',
-                    cell: (value) => new Date(value).toLocaleDateString('pt-BR'),
-                    isCompact: true
+                    cell: (value) => new Date(value).toLocaleDateString('pt-BR')
                   }
                 ]}
                 detailFields={detailFields}
                 onExport={handleExport}
-                filters={FiltersComponent}
+                onDelete={handleDelete}
               />
             )}
           </div>

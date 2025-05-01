@@ -4,15 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import Sidebar from '@/components/dashboard/Sidebar';
-import DataChart from '@/components/dashboard/DataChart';
 import DataTable from '@/components/dashboard/DataTable';
 import StatsCard from '@/components/dashboard/StatsCard';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Calendar, LifeBuoy, Check } from 'lucide-react';
+import { Users, Calendar, LifeBuoy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 
 // Tipo para marujos
 type Marujo = {
@@ -50,7 +45,6 @@ const calcularIdade = (dataNascimento: string): number => {
 
 const Marujos = () => {
   const { toast } = useToast();
-  const [filtroEquipe, setFiltroEquipe] = useState<string | null>(null);
   
   const fetchMarujos = async () => {
     try {
@@ -73,7 +67,7 @@ const Marujos = () => {
   };
 
   // Buscar dados com React Query
-  const { data: marujos, isLoading } = useQuery({
+  const { data: marujos, isLoading, refetch } = useQuery({
     queryKey: ['marujos'],
     queryFn: fetchMarujos
   });
@@ -83,14 +77,29 @@ const Marujos = () => {
     ...marujo,
     idade: calcularIdade(marujo.data_nascimento),
   })) || [];
-  
-  // Filtro para a tabela
-  const dadosFiltrados = filtroEquipe 
-    ? dadosProcessados.filter(item => item.equipe_trabalho === filtroEquipe)
-    : dadosProcessados;
-  
-  // Obter lista de equipes de trabalho únicas
-  const equipes = [...new Set(dadosProcessados.map(item => item.equipe_trabalho))];
+
+  // Função para excluir marujo
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('fichas_marujos')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      // Recarregar os dados após exclusão
+      refetch();
+    } catch (error) {
+      console.error('Erro ao excluir marujo:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o marujo.",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
   
   // Função para exportar
   const handleExport = (format: 'csv' | 'pdf') => {
@@ -101,54 +110,11 @@ const Marujos = () => {
     // Implementar a exportação real posteriormente
   };
   
-  // Componente de filtros para a tabela
-  const FiltersComponent = (
-    <>
-      <DropdownMenuItem onClick={() => setFiltroEquipe(null)}>
-        Todas as equipes
-      </DropdownMenuItem>
-      {equipes.map(equipe => (
-        <DropdownMenuItem key={equipe} onClick={() => setFiltroEquipe(equipe)}>
-          Equipe: {equipe}
-        </DropdownMenuItem>
-      ))}
-      <DropdownMenuItem className="flex justify-end pt-2 border-t mt-2">
-        <Badge variant="outline" onClick={() => setFiltroEquipe(null)} className="cursor-pointer">
-          Limpar filtro
-        </Badge>
-      </DropdownMenuItem>
-    </>
-  );
-  
-  // Dados para o gráfico de distribuição por equipe
-  const getDistribuicaoPorEquipe = () => {
-    if (!dadosProcessados.length) return [];
-    
-    const equipesCount = new Map<string, number>();
-    
-    dadosProcessados.forEach((pessoa) => {
-      equipesCount.set(pessoa.equipe_trabalho, (equipesCount.get(pessoa.equipe_trabalho) || 0) + 1);
-    });
-    
-    return Array.from(equipesCount.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-  };
-  
-  // Dados para o gráfico de onda de origem
-  const getDistribuicaoPorOnda = () => {
-    if (!dadosProcessados.length) return [];
-    
-    const ondasCount = new Map<string, number>();
-    
-    dadosProcessados.forEach((pessoa) => {
-      const ondaLabel = `${pessoa.onda_onde} ${pessoa.onda_numero}`;
-      ondasCount.set(ondaLabel, (ondasCount.get(ondaLabel) || 0) + 1);
-    });
-    
-    return Array.from(ondasCount.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
+  // Função para criar link do WhatsApp
+  const formatWhatsAppLink = (numero: string) => {
+    // Remove caracteres não numéricos
+    const numeros = numero.replace(/\D/g, '');
+    return `https://wa.me/${numeros}`;
   };
 
   return (
@@ -173,25 +139,9 @@ const Marujos = () => {
             />
             <StatsCard 
               title="Equipes Diferentes" 
-              value={equipes.length}
+              value={new Set(dadosProcessados.map(item => item.equipe_trabalho)).size}
               icon={<Users className="h-4 w-4" />}
               description="Total de equipes de marujos"
-            />
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-2 mb-6">
-            <DataChart 
-              type="pie"
-              title="Distribuição por Equipe de Trabalho"
-              data={getDistribuicaoPorEquipe()}
-              colors={['#0369a1', '#38bdf8', '#14b8a6', '#f97316', '#f43f5e', '#8b5cf6']}
-            />
-            
-            <DataChart 
-              type="bar"
-              title="Distribuição por Onda de Origem"
-              data={getDistribuicaoPorOnda()}
-              colors={['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#f43f5e']}
             />
           </div>
           
@@ -203,26 +153,37 @@ const Marujos = () => {
             ) : (
               <DataTable 
                 title="Lista de Marujos"
-                data={dadosFiltrados}
+                data={dadosProcessados}
                 columns={[
                   { accessor: 'nome', header: 'Nome' },
                   { accessor: 'idade', header: 'Idade' },
-                  { accessor: 'whatsapp', header: 'WhatsApp' },
+                  { 
+                    accessor: 'whatsapp', 
+                    header: 'WhatsApp',
+                    cell: (value) => (
+                      <div className="flex items-center">
+                        <span className="mr-2">{value}</span>
+                        {value && (
+                          <a 
+                            href={formatWhatsAppLink(value)} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="p-1 rounded-full bg-green-100 hover:bg-green-200 transition-colors"
+                          >
+                            <svg className="w-4 h-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                              <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
+                            </svg>
+                          </a>
+                        )}
+                      </div>
+                    )
+                  },
                   { 
                     accessor: 'equipe_trabalho', 
                     header: 'Equipe',
                     cell: (value) => (
                       <Badge className="bg-ocean-100 text-ocean-800">
                         {value}
-                      </Badge>
-                    )
-                  },
-                  { 
-                    accessor: 'onda_onde', 
-                    header: 'Onda',
-                    cell: (value, row) => (
-                      <Badge variant="outline" className="bg-sunset-50 text-sunset-800">
-                        {value} {row.onda_numero}
                       </Badge>
                     )
                   },
@@ -234,10 +195,29 @@ const Marujos = () => {
                         {value}
                       </Badge>
                     )
-                  },
+                  }
+                ]}
+                detailFields={[
+                  { label: 'Nome', accessor: 'nome' },
+                  { label: 'Data de Nascimento', accessor: 'data_nascimento', 
+                    render: (value) => value ? new Date(value).toLocaleDateString('pt-BR') : '-' },
+                  { label: 'Idade', accessor: 'idade' },
+                  { label: 'WhatsApp', accessor: 'whatsapp' },
+                  { label: 'Instagram', accessor: 'arroba_instagram',
+                    render: (value, row) => row.tem_instagram ? value : 'Não possui' },
+                  { label: 'Equipe de Trabalho', accessor: 'equipe_trabalho' },
+                  { label: 'Tamanho da Camiseta', accessor: 'tamanho_camiseta' },
+                  { label: 'Onda', accessor: 'onda_onde',
+                    render: (value, row) => `${value} ${row.onda_numero}` },
+                  { label: 'Toma Medicamento', accessor: 'toma_medicamento_continuo',
+                    render: (value, row) => value ? `Sim (${row.medicamento_qual})` : 'Não' },
+                  { label: 'Nome do Responsável', accessor: 'nome_responsavel' },
+                  { label: 'Telefone do Responsável', accessor: 'telefone_responsavel' },
+                  { label: 'Cadastrado em', accessor: 'created_at',
+                    render: (value) => value ? new Date(value).toLocaleDateString('pt-BR') : '-' }
                 ]}
                 onExport={handleExport}
-                filters={FiltersComponent}
+                onDelete={handleDelete}
               />
             )}
           </div>

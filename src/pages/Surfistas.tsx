@@ -1,19 +1,14 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import Sidebar from '@/components/dashboard/Sidebar';
-import DataChart from '@/components/dashboard/DataChart';
 import DataTable from '@/components/dashboard/DataTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Check, Waves, Filter, Download } from 'lucide-react';
+import { Check, Waves, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 
 // Tipo para surfistas
 type Surfista = {
@@ -36,6 +31,7 @@ type Surfista = {
   fobia_qual: string | null;
   fez_crisma: boolean;
   fez_primeira_comunhao: boolean;
+  telefone_surfista: string;
 };
 
 // Função para calcular a idade a partir da data de nascimento
@@ -54,12 +50,6 @@ const calcularIdade = (dataNascimento: string): number => {
 
 const Surfistas = () => {
   const { toast } = useToast();
-  const [filtros, setFiltros] = useState({
-    nivel: [] as string[],
-    genero: [] as string[],
-    pagamento: [] as string[],
-    interesses: [] as string[],
-  });
 
   const fetchSurfistas = async () => {
     try {
@@ -82,161 +72,39 @@ const Surfistas = () => {
   };
 
   // Buscar dados com React Query
-  const { data: surfistas, isLoading } = useQuery({
+  const { data: surfistas, isLoading, refetch } = useQuery({
     queryKey: ['surfistas'],
     queryFn: fetchSurfistas
   });
-  
-  // Função para atualizar filtros
-  const updateFiltro = (categoria: keyof typeof filtros, valor: string) => {
-    setFiltros(prev => {
-      const atualizado = [...prev[categoria]];
-      if (atualizado.includes(valor)) {
-        return { 
-          ...prev, 
-          [categoria]: atualizado.filter(item => item !== valor)
-        };
-      } else {
-        return {
-          ...prev,
-          [categoria]: [...atualizado, valor]
-        };
-      }
-    });
-  };
 
+  // Função para excluir surfista
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('fichas_surfistas')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      // Recarregar os dados após exclusão
+      refetch();
+    } catch (error) {
+      console.error('Erro ao excluir surfista:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o surfista.",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+  
   // Dados processados para exibição
   const dadosProcessados = surfistas?.map(surfista => ({
     ...surfista,
     idade: calcularIdade(surfista.data_nascimento),
   })) || [];
-  
-  // Gráficos
-  const getFaixaEtaria = () => {
-    if (!dadosProcessados.length) return [];
-    
-    const faixas = {
-      'Até 10': 0,
-      '11-14': 0,
-      '15-17': 0,
-      '18+': 0
-    };
-    
-    dadosProcessados.forEach(surfista => {
-      const idade = surfista.idade;
-      if (idade <= 10) faixas['Até 10']++;
-      else if (idade <= 14) faixas['11-14']++;
-      else if (idade <= 17) faixas['15-17']++;
-      else faixas['18+']++;
-    });
-    
-    return Object.entries(faixas).map(([name, value]) => ({ name, value }));
-  };
-  
-  const getComunhaoCrisma = () => {
-    if (!dadosProcessados.length) return [];
-    
-    const ambos = dadosProcessados.filter(s => s.fez_primeira_comunhao && s.fez_crisma).length;
-    const soComunhao = dadosProcessados.filter(s => s.fez_primeira_comunhao && !s.fez_crisma).length;
-    const soCrisma = dadosProcessados.filter(s => !s.fez_primeira_comunhao && s.fez_crisma).length;
-    const nenhum = dadosProcessados.filter(s => !s.fez_primeira_comunhao && !s.fez_crisma).length;
-    
-    return [
-      { name: 'Ambos', value: ambos },
-      { name: 'Só Comunhão', value: soComunhao },
-      { name: 'Só Crisma', value: soCrisma },
-      { name: 'Nenhum', value: nenhum }
-    ];
-  };
-  
-  const getInteresses = () => {
-    if (!dadosProcessados.length) return [];
-    
-    const tocaInstrumento = dadosProcessados.filter(s => s.toca_instrumento).length;
-    const temAlergia = dadosProcessados.filter(s => s.tem_alergia).length;
-    const tomaMedicamento = dadosProcessados.filter(s => s.toma_medicamento_continuo).length;
-    const temFobia = dadosProcessados.filter(s => s.tem_fobia).length;
-    
-    return [
-      { name: 'Toca Instrumento', value: tocaInstrumento },
-      { name: 'Tem Alergia', value: temAlergia },
-      { name: 'Toma Medicamento', value: tomaMedicamento },
-      { name: 'Tem Fobia', value: temFobia }
-    ];
-  };
-  
-  // Opções de filtro para o dropdown
-  const FiltersComponent = (
-    <>
-      <DropdownMenuItem className="flex flex-col items-start">
-        <h4 className="font-semibold mb-1">Toca Instrumento</h4>
-        <div className="space-y-1">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="filter-instrumento-sim"
-              checked={filtros.interesses.includes('instrumento-sim')}
-              onCheckedChange={() => updateFiltro('interesses', 'instrumento-sim')}
-            />
-            <Label htmlFor="filter-instrumento-sim">Sim</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="filter-instrumento-nao"
-              checked={filtros.interesses.includes('instrumento-nao')}
-              onCheckedChange={() => updateFiltro('interesses', 'instrumento-nao')}
-            />
-            <Label htmlFor="filter-instrumento-nao">Não</Label>
-          </div>
-        </div>
-      </DropdownMenuItem>
-      <DropdownMenuItem className="flex flex-col items-start mt-2">
-        <h4 className="font-semibold mb-1">Comunhão e Crisma</h4>
-        <div className="space-y-1">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="filter-comunhao"
-              checked={filtros.interesses.includes('comunhao')}
-              onCheckedChange={() => updateFiltro('interesses', 'comunhao')}
-            />
-            <Label htmlFor="filter-comunhao">Fez Comunhão</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="filter-crisma"
-              checked={filtros.interesses.includes('crisma')}
-              onCheckedChange={() => updateFiltro('interesses', 'crisma')}
-            />
-            <Label htmlFor="filter-crisma">Fez Crisma</Label>
-          </div>
-        </div>
-      </DropdownMenuItem>
-      <DropdownMenuItem className="flex justify-end pt-2 border-t mt-2">
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={() => setFiltros({
-            nivel: [],
-            genero: [],
-            pagamento: [],
-            interesses: [],
-          })}
-        >
-          Limpar Filtros
-        </Button>
-      </DropdownMenuItem>
-    </>
-  );
-  
-  // Aplicar filtros
-  const dadosFiltrados = dadosProcessados.filter(surfista => {
-    // Filtrar por interesses
-    if (filtros.interesses.includes('instrumento-sim') && !surfista.toca_instrumento) return false;
-    if (filtros.interesses.includes('instrumento-nao') && surfista.toca_instrumento) return false;
-    if (filtros.interesses.includes('comunhao') && !surfista.fez_primeira_comunhao) return false;
-    if (filtros.interesses.includes('crisma') && !surfista.fez_crisma) return false;
-    
-    return true;
-  });
   
   // Função para exportar
   const handleExport = (format: 'csv' | 'pdf') => {
@@ -245,6 +113,13 @@ const Surfistas = () => {
       description: "Arquivo sendo gerado para download",
     });
     // Implementação real da exportação seria feita aqui
+  };
+  
+  // Função para criar link do WhatsApp
+  const formatWhatsAppLink = (numero: string) => {
+    // Remove caracteres não numéricos
+    const numeros = numero.replace(/\D/g, '');
+    return `https://wa.me/${numeros}`;
   };
 
   return (
@@ -255,64 +130,16 @@ const Surfistas = () => {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold tracking-tight">Surfistas</h1>
             <div className="flex items-center space-x-3">
-              <Button onClick={() => handleExport('pdf')} variant="outline">
+              <div className="flex items-center space-x-2">
+                <Waves className="h-5 w-5 text-ocean-600" />
+                <span className="font-medium">Total: {surfistas?.length || 0} surfistas</span>
+              </div>
+              <Button onClick={() => handleExport('pdf')} variant="outline" size="sm">
                 <Download className="mr-2 h-4 w-4" />
-                Exportar PDF
-              </Button>
-              <Button onClick={() => handleExport('csv')} variant="outline">
-                <Download className="mr-2 h-4 w-4" />
-                Exportar CSV
+                Exportar
               </Button>
             </div>
           </div>
-          
-          <Card className="mb-6">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Visão Geral de Surfistas</CardTitle>
-                <div className="flex items-center space-x-2">
-                  <Waves className="h-5 w-5 text-ocean-600" />
-                  <span className="font-medium">Total: {surfistas?.length || 0} surfistas</span>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="idade">
-                <TabsList className="grid grid-cols-3 mb-6">
-                  <TabsTrigger value="idade">Idade</TabsTrigger>
-                  <TabsTrigger value="comunhao-crisma">Comunhão/Crisma</TabsTrigger>
-                  <TabsTrigger value="interesses">Interesses</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="idade">
-                  <DataChart 
-                    type="bar" 
-                    title="" 
-                    data={getFaixaEtaria()} 
-                    colors={['#38bdf8', '#0ea5e9', '#0369a1', '#075985']}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="comunhao-crisma">
-                  <DataChart 
-                    type="pie" 
-                    title="" 
-                    data={getComunhaoCrisma()} 
-                    colors={['#10b981', '#0369a1', '#f472b6', '#f97316']}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="interesses">
-                  <DataChart 
-                    type="bar" 
-                    title="" 
-                    data={getInteresses()}
-                    colors={['#38bdf8', '#f97316', '#10b981', '#f43f5e']}
-                  />
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
           
           <div className="mb-6">
             {isLoading ? (
@@ -322,10 +149,31 @@ const Surfistas = () => {
             ) : (
               <DataTable 
                 title="Lista de Surfistas"
-                data={dadosFiltrados}
+                data={dadosProcessados}
                 columns={[
                   { accessor: 'nome_surfista', header: 'Nome' },
                   { accessor: 'idade', header: 'Idade' },
+                  { 
+                    accessor: 'telefone_surfista', 
+                    header: 'WhatsApp',
+                    cell: (value, row) => (
+                      <div className="flex items-center">
+                        <span className="mr-2">{value}</span>
+                        {value && (
+                          <a 
+                            href={formatWhatsAppLink(value)} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="p-1 rounded-full bg-green-100 hover:bg-green-200 transition-colors"
+                          >
+                            <svg className="w-4 h-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                              <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
+                            </svg>
+                          </a>
+                        )}
+                      </div>
+                    )
+                  },
                   { 
                     accessor: 'tamanho_camiseta_surfista', 
                     header: 'Camiseta',
@@ -339,34 +187,34 @@ const Surfistas = () => {
                     accessor: 'escola_serie_ano', 
                     header: 'Escola/Série',
                   },
-                  { 
-                    accessor: 'fez_primeira_comunhao', 
-                    header: 'Comunhão',
-                    cell: (value) => value ? (
-                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                        <Check className="mr-1 h-3 w-3" /> Sim
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-orange-500">
-                        Não
-                      </Badge>
-                    )
-                  },
-                  { 
-                    accessor: 'fez_crisma', 
-                    header: 'Crisma',
-                    cell: (value) => value ? (
-                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                        <Check className="mr-1 h-3 w-3" /> Sim
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-orange-500">
-                        Não
-                      </Badge>
-                    )
-                  },
                 ]}
-                filters={FiltersComponent}
+                detailFields={[
+                  { label: 'Nome', accessor: 'nome_surfista' },
+                  { label: 'Data de Nascimento', accessor: 'data_nascimento', 
+                    render: (value) => new Date(value).toLocaleDateString('pt-BR') },
+                  { label: 'Idade', accessor: 'idade' },
+                  { label: 'WhatsApp', accessor: 'telefone_surfista' },
+                  { label: 'Instagram', accessor: 'arroba_instagram',
+                    render: (value, row) => row.tem_instagram ? value : 'Não possui' },
+                  { label: 'Escola/Série', accessor: 'escola_serie_ano' },
+                  { label: 'Tamanho da Camiseta', accessor: 'tamanho_camiseta_surfista' },
+                  { label: 'Toca Instrumento', accessor: 'toca_instrumento', 
+                    render: (value, row) => value ? `Sim (${row.instrumento_qual})` : 'Não' },
+                  { label: 'Tem Irmãos', accessor: 'tem_irmaos',
+                    render: (value, row) => value ? `Sim (${row.quantidade_irmaos})` : 'Não' },
+                  { label: 'Toma Medicamento', accessor: 'toma_medicamento_continuo',
+                    render: (value, row) => value ? `Sim (${row.medicamento_qual})` : 'Não' },
+                  { label: 'Tem Alergia', accessor: 'tem_alergia',
+                    render: (value, row) => value ? `Sim (${row.alergia_qual})` : 'Não' },
+                  { label: 'Tem Fobia', accessor: 'tem_fobia',
+                    render: (value, row) => value ? `Sim (${row.fobia_qual})` : 'Não' },
+                  { label: 'Fez Primeira Comunhão', accessor: 'fez_primeira_comunhao',
+                    render: (value) => value ? 'Sim' : 'Não' },
+                  { label: 'Fez Crisma', accessor: 'fez_crisma',
+                    render: (value) => value ? 'Sim' : 'Não' }
+                ]}
+                onExport={handleExport}
+                onDelete={handleDelete}
               />
             )}
           </div>

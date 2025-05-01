@@ -22,17 +22,35 @@ import {
   SearchIcon,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  ChevronUp,
+  Eye,
+  Trash2
 } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface Column {
   accessor: string;
   header: string;
   cell?: (value: any, row: any) => React.ReactNode;
-  isCompact?: boolean;
 }
 
 interface DetailField {
@@ -48,6 +66,7 @@ interface DataTableProps {
   onExport?: (format: 'csv' | 'pdf') => void;
   filters?: React.ReactNode;
   detailFields?: DetailField[];
+  onDelete?: (id: string) => Promise<void>;
 }
 
 export function DataTable({
@@ -57,19 +76,16 @@ export function DataTable({
   onExport,
   filters,
   detailFields,
+  onDelete,
 }: DataTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [expandedRows, setExpandedRows] = useState<Record<string | number, boolean>>({});
-  
-  // Função para alternar a expansão da linha
-  const toggleRowExpansion = (rowIndex: number) => {
-    setExpandedRows(prev => ({
-      ...prev,
-      [rowIndex]: !prev[rowIndex]
-    }));
-  };
+  const [selectedRow, setSelectedRow] = useState<any | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [rowToDelete, setRowToDelete] = useState<string | null>(null);
+  const { toast } = useToast();
   
   // Filtrar dados baseado no termo de busca
   const filteredData = data.filter(item =>
@@ -83,9 +99,37 @@ export function DataTable({
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
-  // Separar colunas compactas das detalhadas
-  const compactColumns = columns.filter(col => col.isCompact !== false);
-  
+  const handleViewDetails = (row: any) => {
+    setSelectedRow(row);
+    setIsDetailDialogOpen(true);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setRowToDelete(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!rowToDelete || !onDelete) return;
+    
+    try {
+      await onDelete(rowToDelete);
+      toast({
+        title: "Item excluído",
+        description: "O item foi excluído com sucesso",
+      });
+      setIsDeleteDialogOpen(false);
+      setRowToDelete(null);
+    } catch (error) {
+      console.error("Erro ao excluir item:", error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o item. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -101,19 +145,6 @@ export function DataTable({
                 className="pl-8 w-[200px]"
               />
             </div>
-            
-            {filters && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon">
-                    <FilterIcon className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {filters}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
             
             {onExport && (
               <DropdownMenu>
@@ -141,72 +172,51 @@ export function DataTable({
           <Table>
             <TableHeader>
               <TableRow>
-                {compactColumns.map((column) => (
+                {columns.map((column) => (
                   <TableHead key={column.accessor}>{column.header}</TableHead>
                 ))}
-                {detailFields && <TableHead className="w-10"></TableHead>}
+                <TableHead className="w-[100px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedData.length > 0 ? (
                 paginatedData.map((row, rowIndex) => (
-                  <>
-                    <TableRow key={`row-${rowIndex}`}>
-                      {compactColumns.map((column) => (
-                        <TableCell key={column.accessor}>
-                          {column.cell 
-                            ? column.cell(row[column.accessor], row)
-                            : row[column.accessor]}
-                        </TableCell>
-                      ))}
-                      {detailFields && (
-                        <TableCell className="p-0 text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => toggleRowExpansion(rowIndex)}
-                            aria-label={expandedRows[rowIndex] ? "Recolher detalhes" : "Expandir detalhes"}
+                  <TableRow key={`row-${rowIndex}`}>
+                    {columns.map((column) => (
+                      <TableCell key={column.accessor}>
+                        {column.cell 
+                          ? column.cell(row[column.accessor], row)
+                          : row[column.accessor]}
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-right">
+                      <div className="flex justify-end space-x-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(row)}
+                          title="Ver detalhes"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {onDelete && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteClick(row.id)}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            title="Excluir"
                           >
-                            {expandedRows[rowIndex] ? (
-                              <ChevronUp className="h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4" />
-                            )}
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                    {detailFields && (
-                      <TableRow key={`details-${rowIndex}`} className="border-0">
-                        <TableCell colSpan={compactColumns.length + 1} className="p-0">
-                          <div
-                            className={`overflow-hidden transition-all duration-300 ease-in-out bg-muted/20 ${
-                              expandedRows[rowIndex] ? 'max-h-96' : 'max-h-0'
-                            }`}
-                          >
-                            {expandedRows[rowIndex] && (
-                              <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
-                                {detailFields.map((field, fieldIndex) => (
-                                  <div key={fieldIndex} className="flex flex-col">
-                                    <span className="font-medium text-sm text-muted-foreground">{field.label}</span>
-                                    <span className="text-sm">
-                                      {field.render 
-                                        ? field.render(row[field.accessor], row) 
-                                        : row[field.accessor] || '-'}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length + (detailFields ? 1 : 0)} className="h-24 text-center">
+                  <TableCell colSpan={columns.length + 1} className="h-24 text-center">
                     Nenhum resultado encontrado.
                   </TableCell>
                 </TableRow>
@@ -241,6 +251,58 @@ export function DataTable({
           </Button>
         </div>
       </CardFooter>
+
+      {/* Modal para detalhes */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes</DialogTitle>
+            <DialogDescription>
+              Informações completas do registro
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedRow && detailFields && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+              {detailFields.map((field, index) => (
+                <div key={index} className="flex flex-col">
+                  <span className="text-sm font-medium text-muted-foreground">{field.label}</span>
+                  <span className="text-sm">
+                    {field.render
+                      ? field.render(selectedRow[field.accessor], selectedRow)
+                      : selectedRow[field.accessor] ?? '-'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Fechar</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de confirmação de exclusão */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Este item será permanentemente excluído
+              do sistema e não poderá ser recuperado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

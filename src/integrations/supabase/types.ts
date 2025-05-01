@@ -128,7 +128,7 @@ export type Database = {
       }
       fichas_surfistas: {
         Row: {
-          alergia_qual: string | null
+          alergia: string | null
           arroba_instagram: string | null
           created_at: string | null
           data_nascimento: string
@@ -136,31 +136,24 @@ export type Database = {
           escola_serie_ano: string
           fez_crisma: boolean
           fez_primeira_comunhao: boolean
-          fobia_qual: string | null
+          fobia: string | null
           id: string
           informacao_adicional_surfista: string | null
-          instrumento_qual: string | null
-          medicamento_horario: string | null
-          medicamento_qual: string | null
+          instrumento: string | null
+          irmaos: number | null
+          medicamento: string | null
           nome_mae: string
           nome_pai: string
           nome_surfista: string
-          quantidade_irmaos: number | null
           rg_cpf_surfista: string | null
           tamanho_camiseta_surfista: string
           telefone_mae: string
           telefone_pai: string
           telefone_surfista: string
-          tem_alergia: boolean | null
-          tem_fobia: boolean | null
-          tem_instagram: boolean | null
-          tem_irmaos: boolean
-          toca_instrumento: boolean | null
-          toma_medicamento_continuo: boolean | null
           updated_at: string | null
         }
         Insert: {
-          alergia_qual?: string | null
+          alergia?: string | null
           arroba_instagram?: string | null
           created_at?: string | null
           data_nascimento: string
@@ -168,31 +161,24 @@ export type Database = {
           escola_serie_ano: string
           fez_crisma: boolean
           fez_primeira_comunhao: boolean
-          fobia_qual?: string | null
+          fobia?: string | null
           id?: string
           informacao_adicional_surfista?: string | null
-          instrumento_qual?: string | null
-          medicamento_horario?: string | null
-          medicamento_qual?: string | null
+          instrumento?: string | null
+          irmaos?: number | null
+          medicamento?: string | null
           nome_mae: string
           nome_pai: string
           nome_surfista: string
-          quantidade_irmaos?: number | null
           rg_cpf_surfista?: string | null
           tamanho_camiseta_surfista: string
           telefone_mae: string
           telefone_pai: string
           telefone_surfista: string
-          tem_alergia?: boolean | null
-          tem_fobia?: boolean | null
-          tem_instagram?: boolean | null
-          tem_irmaos: boolean
-          toca_instrumento?: boolean | null
-          toma_medicamento_continuo?: boolean | null
           updated_at?: string | null
         }
         Update: {
-          alergia_qual?: string | null
+          alergia?: string | null
           arroba_instagram?: string | null
           created_at?: string | null
           data_nascimento?: string
@@ -200,27 +186,20 @@ export type Database = {
           escola_serie_ano?: string
           fez_crisma?: boolean
           fez_primeira_comunhao?: boolean
-          fobia_qual?: string | null
+          fobia?: string | null
           id?: string
           informacao_adicional_surfista?: string | null
-          instrumento_qual?: string | null
-          medicamento_horario?: string | null
-          medicamento_qual?: string | null
+          instrumento?: string | null
+          irmaos?: number | null
+          medicamento?: string | null
           nome_mae?: string
           nome_pai?: string
           nome_surfista?: string
-          quantidade_irmaos?: number | null
           rg_cpf_surfista?: string | null
           tamanho_camiseta_surfista?: string
           telefone_mae?: string
           telefone_pai?: string
           telefone_surfista?: string
-          tem_alergia?: boolean | null
-          tem_fobia?: boolean | null
-          tem_instagram?: boolean | null
-          tem_irmaos?: boolean
-          toca_instrumento?: boolean | null
-          toma_medicamento_continuo?: boolean | null
           updated_at?: string | null
         }
         Relationships: []
@@ -378,6 +357,33 @@ export type Database = {
         }
         Relationships: []
       }
+      usuarios: {
+        Row: {
+          created_at: string | null
+          id: string
+          nome_completo: string
+          permissao: Database["public"]["Enums"]["permissao_tipo"]
+          primeiro_login: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          nome_completo: string
+          permissao?: Database["public"]["Enums"]["permissao_tipo"]
+          primeiro_login?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          nome_completo?: string
+          permissao?: Database["public"]["Enums"]["permissao_tipo"]
+          primeiro_login?: boolean
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -386,7 +392,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      permissao_tipo: "supreme" | "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -501,6 +507,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      permissao_tipo: ["supreme", "admin", "user"],
+    },
   },
 } as const
