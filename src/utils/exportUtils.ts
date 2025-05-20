@@ -1,6 +1,6 @@
 
 import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autoTable";
+import autoTable from "jspdf-autotable";
 
 // Helper function to convert data to CSV format
 export const convertToCSV = <T extends Record<string, any>>(
