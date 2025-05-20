@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import {
   Table,
@@ -46,6 +45,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { convertToCSV, downloadCSV, downloadPDF } from "@/utils/exportUtils";
 
 interface Column {
   accessor: string;
@@ -99,6 +99,40 @@ export function DataTable({
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
+  const handleExport = (format: 'csv' | 'pdf') => {
+    if (onExport) {
+      // If custom export handler provided, use it
+      onExport(format);
+      return;
+    }
+    
+    // Otherwise use built-in export functionality
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const sanitizedTitle = title.toLowerCase().replace(/\s+/g, '-');
+    
+    if (format === 'csv') {
+      const csvData = convertToCSV(filteredData, columns);
+      downloadCSV(csvData, `${sanitizedTitle}-${timestamp}.csv`);
+      
+      toast({
+        title: "Exportação concluída",
+        description: `Dados exportados para formato CSV com sucesso`,
+      });
+    } else if (format === 'pdf') {
+      downloadPDF(
+        filteredData, 
+        columns, 
+        title, 
+        `${sanitizedTitle}-${timestamp}.pdf`
+      );
+      
+      toast({
+        title: "Exportação concluída",
+        description: `Dados exportados para formato PDF com sucesso`,
+      });
+    }
+  };
+
   const handleViewDetails = (row: any) => {
     setSelectedRow(row);
     setIsDetailDialogOpen(true);
@@ -146,24 +180,22 @@ export function DataTable({
               />
             </div>
             
-            {onExport && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    <DownloadIcon className="mr-2 h-4 w-4" />
-                    Exportar
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onExport('csv')}>
-                    Exportar CSV
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onExport('pdf')}>
-                    Exportar PDF
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <DownloadIcon className="mr-2 h-4 w-4" />
+                  Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport('csv')}>
+                  Exportar CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                  Exportar PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </CardHeader>

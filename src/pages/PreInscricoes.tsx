@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -74,11 +73,7 @@ const PreInscricoes = () => {
   
   // Função para exportação
   const handleExport = (format: 'csv' | 'pdf') => {
-    toast({
-      title: `Exportando em formato ${format.toUpperCase()}`,
-      description: "Arquivo sendo gerado para download",
-    });
-    // Implementar a exportação real posteriormente
+    console.log(`Exportando em formato ${format.toUpperCase()} via DataTable`);
   };
 
   // Definição dos campos de detalhe para o DataTable

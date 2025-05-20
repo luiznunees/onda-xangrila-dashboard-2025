@@ -330,6 +330,7 @@ export type Database = {
           idade: number
           nome_completo: string
           nome_responsavel: string
+          Status: string | null
           telefone_responsavel: string
           updated_at: string | null
         }
@@ -341,6 +342,7 @@ export type Database = {
           idade: number
           nome_completo: string
           nome_responsavel: string
+          Status?: string | null
           telefone_responsavel: string
           updated_at?: string | null
         }
@@ -352,6 +354,7 @@ export type Database = {
           idade?: number
           nome_completo?: string
           nome_responsavel?: string
+          Status?: string | null
           telefone_responsavel?: string
           updated_at?: string | null
         }
