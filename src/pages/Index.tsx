@@ -1,226 +1,156 @@
 
-import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
-import StatsCard from "@/components/dashboard/StatsCard";
-import CountdownTimer from "@/components/dashboard/CountdownTimer";
-import DataChart from "@/components/dashboard/DataChart";
-import Sidebar from "@/components/dashboard/Sidebar";
-import { User, Users, Waves, LifeBuoy } from "lucide-react";
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { LogIn, LogOut, Users, Calendar, Waves, LifeBuoy, Crown } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import Sidebar from '@/components/dashboard/Sidebar';
 
-const Dashboard = () => {
-  const { toast } = useToast();
+const Index = () => {
+  const { user, loading, signOut, userProfile } = useAuth();
 
-  // Buscar dados das pré-inscrições
-  const fetchPreInscricoes = async () => {
-    const { data, error } = await supabase
-      .from('pre_inscricoes')
-      .select('count')
-      .single();
-    
-    if (error) {
-      console.error('Erro ao buscar contagem de pré-inscrições:', error);
-      return 0;
-    }
-    
-    return data?.count || 0;
-  };
-  
-  // Buscar dados dos surfistas
-  const fetchSurfistas = async () => {
-    const { data, error } = await supabase
-      .from('fichas_surfistas')
-      .select('count')
-      .single();
-    
-    if (error) {
-      console.error('Erro ao buscar contagem de surfistas:', error);
-      return 0;
-    }
-    
-    return data?.count || 0;
-  };
-  
-  // Buscar dados da equipe de apoio
-  const fetchApoio = async () => {
-    const { data, error } = await supabase
-      .from('fichas_apoio')
-      .select('count')
-      .single();
-    
-    if (error) {
-      console.error('Erro ao buscar contagem de apoio:', error);
-      return 0;
-    }
-    
-    return data?.count || 0;
-  };
-  
-  // Buscar dados dos marujos
-  const fetchMarujos = async () => {
-    const { data, error } = await supabase
-      .from('fichas_marujos')
-      .select('count')
-      .single();
-    
-    if (error) {
-      console.error('Erro ao buscar contagem de marujos:', error);
-      return 0;
-    }
-    
-    return data?.count || 0;
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Carregando...</div>
+      </div>
+    );
+  }
 
-  // Buscar todos os dados para o dashboard
-  const fetchDashboardData = async () => {
-    try {
-      const [preInscricoesData, surfistasData, apoioData, marujosData] = await Promise.all([
-        supabase.from('pre_inscricoes').select('*'),
-        supabase.from('fichas_surfistas').select('*'),
-        supabase.from('fichas_apoio').select('*'),
-        supabase.from('fichas_marujos').select('*'),
-      ]);
-
-      return {
-        preInscricoes: preInscricoesData.data || [],
-        surfistas: surfistasData.data || [],
-        apoio: apoioData.data || [],
-        marujos: marujosData.data || [],
-      };
-    } catch (error) {
-      console.error('Erro ao buscar dados do dashboard:', error);
-      toast({
-        title: "Erro ao carregar dados",
-        description: "Não foi possível carregar os dados do dashboard.",
-        variant: "destructive"
-      });
-      return {
-        preInscricoes: [],
-        surfistas: [],
-        apoio: [],
-        marujos: [],
-      };
-    }
-  };
-
-  // Buscar dados com React Query
-  const { data: dashboardData, isLoading } = useQuery({
-    queryKey: ['dashboardData'],
-    queryFn: fetchDashboardData
-  });
-
-  // Processar dados para os cards e gráficos
-  const summaryData = [
-    { name: 'Pré-Inscrições', value: dashboardData?.preInscricoes.length || 0 },
-    { name: 'Surfistas', value: dashboardData?.surfistas.length || 0 },
-    { name: 'Apoio', value: dashboardData?.apoio.length || 0 },
-    { name: 'Marujos', value: dashboardData?.marujos.length || 0 },
-  ];
-
-  const distributionData = [
-    { name: 'Surfistas', value: dashboardData?.surfistas.length || 0, color: '#0369a1' },
-    { name: 'Apoio', value: dashboardData?.apoio.length || 0, color: '#38bdf8' },
-    { name: 'Marujos', value: dashboardData?.marujos.length || 0, color: '#f97316' },
-  ];
-
-  // Log para fins de diagnóstico
-  useEffect(() => {
-    console.log("Dashboard montado");
-  }, []);
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ocean-50 to-sunset-50">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold text-ocean-800">
+              Retiro Onda Xangri-lá 2025
+            </CardTitle>
+            <CardDescription>
+              Sistema de gerenciamento interno
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-center text-gray-600">
+              Faça login para acessar o sistema de gerenciamento do retiro.
+            </p>
+            <Link to="/auth" className="block">
+              <Button className="w-full">
+                <LogIn className="mr-2 h-4 w-4" />
+                Fazer Login
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
       <div className="flex-1 overflow-auto">
         <main className="container py-6">
-          <h1 className="text-3xl font-bold tracking-tight mb-6">Dashboard Onda Xangri-lá 2025</h1>
-          
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-            <StatsCard 
-              title="Pré-Inscrições" 
-              value={dashboardData?.preInscricoes.length || 0} 
-              icon={<User className="h-4 w-4" />}
-              trend={{ value: 0, isPositive: true }}
-              isLoading={isLoading}
-            />
-            <StatsCard 
-              title="Surfistas" 
-              value={dashboardData?.surfistas.length || 0} 
-              icon={<Waves className="h-4 w-4" />}
-              trend={{ value: 0, isPositive: true }}
-              isLoading={isLoading}
-            />
-            <StatsCard 
-              title="Apoio" 
-              value={dashboardData?.apoio.length || 0} 
-              icon={<Users className="h-4 w-4" />}
-              trend={{ value: 0, isPositive: true }}
-              isLoading={isLoading}
-            />
-            <StatsCard 
-              title="Marujos" 
-              value={dashboardData?.marujos.length || 0} 
-              icon={<LifeBuoy className="h-4 w-4" />}
-              trend={{ value: 0, isPositive: true }}
-              isLoading={isLoading}
-            />
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Bem-vindo, {userProfile?.nome_completo || user.email}!
+              </h1>
+              <p className="text-muted-foreground">
+                Sistema de gerenciamento do Retiro Onda Xangri-lá 2025
+              </p>
+            </div>
+            <Button variant="outline" onClick={signOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 mb-6">
-            <CountdownTimer />
-            <Card className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className="flex flex-col lg:flex-row">
-                  <div className="relative w-full lg:w-1/3 h-full min-h-[200px]">
-                    <div className="absolute inset-0 bg-ocean-gradient flex items-center justify-center p-6 text-white text-center">
-                      <div>
-                        <h3 className="text-lg font-bold">Retiro Onda</h3>
-                        <p className="text-sm mt-2">18-20 de Julho de 2025</p>
-                        <p className="text-sm mt-4">Xangri-lá, Rio Grande do Sul</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-6 flex-1">
-                    <h3 className="font-medium text-lg mb-2">Informações Gerais</h3>
-                    <ul className="space-y-1 text-sm">
-                      <li className="flex items-center space-x-2">
-                        <span className="w-24 text-muted-foreground">Local:</span>
-                        <span>Praia de Xangri-lá, RS</span>
-                      </li>
-                      <li className="flex items-center space-x-2">
-                        <span className="w-24 text-muted-foreground">Duração:</span>
-                        <span>3 dias (sex a dom)</span>
-                      </li>
-                      <li className="flex items-center space-x-2">
-                        <span className="w-24 text-muted-foreground">Capacidade:</span>
-                        <span>100 surfistas</span>
-                      </li>
-                      <li className="flex items-center space-x-2">
-                        <span className="w-24 text-muted-foreground">Coordenação:</span>
-                        <span>Equipe Onda Xangri-lá</span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <Link to="/agenda">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Calendar className="mr-2 h-5 w-5 text-ocean-600" />
+                    Agenda
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie eventos e compromissos do retiro
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <DataChart 
-              type="bar" 
-              title="Resumo de Participantes" 
-              data={summaryData} 
-              isLoading={isLoading}
-            />
-            <DataChart 
-              type="pie" 
-              title="Distribuição de Participantes" 
-              data={distributionData}
-              isLoading={isLoading}
-            />
+            <Link to="/pre-inscricoes">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Users className="mr-2 h-5 w-5 text-sunset-600" />
+                    Pré-Inscrições
+                  </CardTitle>
+                  <CardDescription>
+                    Visualize as pré-inscrições recebidas
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+
+            <Link to="/surfistas">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Waves className="mr-2 h-5 w-5 text-ocean-600" />
+                    Surfistas
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie as fichas dos surfistas
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+
+            <Link to="/apoio">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <LifeBuoy className="mr-2 h-5 w-5 text-sunset-600" />
+                    Equipe de Apoio
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie a equipe de apoio
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+
+            <Link to="/marujos">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Crown className="mr-2 h-5 w-5 text-ocean-600" />
+                    Marujos
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie os marujos do retiro
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+
+            {userProfile?.permissao === 'supreme' && (
+              <Link to="/usuarios">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer border-purple-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Users className="mr-2 h-5 w-5 text-purple-600" />
+                      Usuários
+                    </CardTitle>
+                    <CardDescription>
+                      Gerencie usuários do sistema (Supremo)
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+            )}
           </div>
         </main>
       </div>
@@ -228,4 +158,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default Index;
