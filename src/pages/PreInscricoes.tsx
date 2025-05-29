@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -5,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Sidebar from "@/components/dashboard/Sidebar";
 import StatsCard from "@/components/dashboard/StatsCard";
 import DataTable from "@/components/dashboard/DataTable";
+import PreInscricoesFilters from "@/components/dashboard/PreInscricoesFilters";
 import { UserPlus, TrendingUp, UserCheck } from "lucide-react";
 
 // Tipo para pré-inscrições
@@ -21,6 +23,7 @@ type PreInscricao = {
 
 const PreInscricoes = () => {
   const { toast } = useToast();
+  const [filteredData, setFilteredData] = useState<PreInscricao[]>([]);
   
   const fetchPreInscricoes = async () => {
     try {
@@ -47,6 +50,9 @@ const PreInscricoes = () => {
     queryKey: ['preInscricoes'],
     queryFn: fetchPreInscricoes
   });
+
+  // Dados para exibir (filtrados ou todos)
+  const dataToDisplay = filteredData.length > 0 || preInscricoes?.length === 0 ? filteredData : preInscricoes || [];
   
   // Função para exclusão
   const handleDelete = async (id: string) => {
@@ -87,7 +93,7 @@ const PreInscricoes = () => {
     { 
       label: "Data de Inscrição", 
       accessor: "created_at",
-      render: (value) => new Date(value).toLocaleDateString('pt-BR')
+      render: (value: string) => new Date(value).toLocaleDateString('pt-BR')
     }
   ];
 
@@ -107,17 +113,24 @@ const PreInscricoes = () => {
             />
             <StatsCard 
               title="Média de Idade" 
-              value={Math.round(preInscricoes?.reduce((acc, curr) => acc + curr.idade, 0) / (preInscricoes?.length || 1)) || 0}
+              value={Math.round(dataToDisplay.reduce((acc, curr) => acc + curr.idade, 0) / (dataToDisplay.length || 1)) || 0}
               icon={<TrendingUp className="h-4 w-4" />}
-              description="Média de idade dos pré-inscritos"
+              description="Média de idade dos pré-inscritos filtrados"
             />
             <StatsCard 
               title="Cidades Diferentes" 
-              value={new Set(preInscricoes?.map(item => item.cidade)).size || 0}
+              value={new Set(dataToDisplay.map(item => item.cidade)).size || 0}
               icon={<UserCheck className="h-4 w-4" />}
               description="Número de cidades representadas"
             />
           </div>
+
+          {!isLoading && preInscricoes && (
+            <PreInscricoesFilters 
+              data={preInscricoes}
+              onFilteredDataChange={setFilteredData}
+            />
+          )}
           
           <div className="mb-6">
             {isLoading ? (
@@ -126,8 +139,8 @@ const PreInscricoes = () => {
               </div>
             ) : (
               <DataTable 
-                title="Lista de Pré-Inscrições"
-                data={preInscricoes || []}
+                title={`Lista de Pré-Inscrições (${dataToDisplay.length} registros)`}
+                data={dataToDisplay}
                 columns={[
                   { accessor: 'nome_completo', header: 'Nome' },
                   { accessor: 'idade', header: 'Idade' },
@@ -136,7 +149,7 @@ const PreInscricoes = () => {
                   { 
                     accessor: 'created_at', 
                     header: 'Data de Inscrição',
-                    cell: (value) => new Date(value).toLocaleDateString('pt-BR')
+                    cell: (value: string) => new Date(value).toLocaleDateString('pt-BR')
                   }
                 ]}
                 detailFields={detailFields}
