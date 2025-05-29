@@ -29,8 +29,44 @@ const PreInscricoesFilters = ({ data, onFilteredDataChange }: PreInscricoesFilte
   const [selectedMeses, setSelectedMeses] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<string>("newest");
 
-  // Gerar opções únicas para cada filtro
-  const cidadeOptions = Array.from(new Set(data.map(item => item.cidade)))
+  // Função para normalizar texto
+  const normalizeText = (text: string): string => {
+    return text
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/\s+/g, ' '); // Remove espaços extras
+  };
+
+  // Função para encontrar a cidade mais comum com essa normalização
+  const getMostCommonCity = (normalizedCity: string, cities: string[]): string => {
+    const matchingCities = cities.filter(city => 
+      normalizeText(city) === normalizedCity
+    );
+    
+    // Retorna a cidade mais frequente ou a primeira se todas têm a mesma frequência
+    const cityCount = matchingCities.reduce((acc, city) => {
+      acc[city] = (acc[city] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return Object.entries(cityCount)
+      .sort(([,a], [,b]) => b - a)[0][0];
+  };
+
+  // Gerar opções únicas para cidades (normalizadas)
+  const allCities = data.map(item => item.cidade);
+  const normalizedCityMap = new Map<string, string>();
+  
+  allCities.forEach(city => {
+    const normalized = normalizeText(city);
+    if (!normalizedCityMap.has(normalized)) {
+      normalizedCityMap.set(normalized, getMostCommonCity(normalized, allCities));
+    }
+  });
+
+  const cidadeOptions = Array.from(normalizedCityMap.values())
     .sort()
     .map(cidade => ({ value: cidade, label: cidade }));
 
@@ -58,11 +94,14 @@ const PreInscricoesFilters = ({ data, onFilteredDataChange }: PreInscricoesFilte
   useEffect(() => {
     let filteredData = [...data];
 
-    // Filtro por cidade
+    // Filtro por cidade (considerando normalização)
     if (selectedCidades.length > 0) {
-      filteredData = filteredData.filter(item => 
-        selectedCidades.includes(item.cidade)
-      );
+      filteredData = filteredData.filter(item => {
+        const normalizedItemCity = normalizeText(item.cidade);
+        return selectedCidades.some(selectedCity => 
+          normalizeText(selectedCity) === normalizedItemCity
+        );
+      });
     }
 
     // Filtro por idade
