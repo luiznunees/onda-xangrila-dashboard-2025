@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { X, Filter } from "lucide-react";
 import MultiSelectFilter from "./MultiSelectFilter";
+import SortSelect from "./SortSelect";
 
 interface PreInscricao {
   id: string;
@@ -26,6 +27,7 @@ const PreInscricoesFilters = ({ data, onFilteredDataChange }: PreInscricoesFilte
   const [selectedCidades, setSelectedCidades] = useState<string[]>([]);
   const [selectedIdades, setSelectedIdades] = useState<string[]>([]);
   const [selectedMeses, setSelectedMeses] = useState<string[]>([]);
+  const [sortOrder, setSortOrder] = useState<string>("newest");
 
   // Gerar opções únicas para cada filtro
   const cidadeOptions = Array.from(new Set(data.map(item => item.cidade)))
@@ -52,7 +54,7 @@ const PreInscricoesFilters = ({ data, onFilteredDataChange }: PreInscricoesFilte
     { value: "12", label: "Dezembro" }
   ];
 
-  // Aplicar filtros
+  // Aplicar filtros e ordenação
   useEffect(() => {
     let filteredData = [...data];
 
@@ -79,14 +81,27 @@ const PreInscricoesFilters = ({ data, onFilteredDataChange }: PreInscricoesFilte
       });
     }
 
+    // Aplicar ordenação por data
+    filteredData.sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      
+      if (sortOrder === "newest") {
+        return dateB - dateA; // Mais recentes primeiro
+      } else {
+        return dateA - dateB; // Mais antigas primeiro
+      }
+    });
+
     onFilteredDataChange(filteredData);
-  }, [selectedCidades, selectedIdades, selectedMeses, data, onFilteredDataChange]);
+  }, [selectedCidades, selectedIdades, selectedMeses, sortOrder, data, onFilteredDataChange]);
 
   // Limpar todos os filtros
   const clearAllFilters = () => {
     setSelectedCidades([]);
     setSelectedIdades([]);
     setSelectedMeses([]);
+    setSortOrder("newest");
   };
 
   // Contar filtros ativos
@@ -97,14 +112,14 @@ const PreInscricoesFilters = ({ data, onFilteredDataChange }: PreInscricoesFilte
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Filter className="h-5 w-5" />
-          Filtros
+          Filtros e Ordenação
           {activeFiltersCount > 0 && (
-            <Badge variant="secondary">{activeFiltersCount} ativo(s)</Badge>
+            <Badge variant="secondary">{activeFiltersCount} filtro(s) ativo(s)</Badge>
           )}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <MultiSelectFilter
             title="Cidade"
             options={cidadeOptions}
@@ -127,6 +142,11 @@ const PreInscricoesFilters = ({ data, onFilteredDataChange }: PreInscricoesFilte
             selectedValues={selectedMeses}
             onSelectionChange={setSelectedMeses}
             placeholder="Todos os meses"
+          />
+
+          <SortSelect
+            value={sortOrder}
+            onValueChange={setSortOrder}
           />
         </div>
 
