@@ -9,6 +9,69 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admins: {
+        Row: {
+          created_at: string
+          email: string
+          id: number
+          nome: string
+          senha: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: number
+          nome: string
+          senha: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: number
+          nome?: string
+          senha?: string
+        }
+        Relationships: []
+      }
+      confirmados: {
+        Row: {
+          bairro: string | null
+          cidade: string | null
+          created_at: string | null
+          id: string
+          idade: number | null
+          nome_completo: string | null
+          nome_responsavel: string | null
+          Status: string | null
+          telefone_responsavel: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          bairro?: string | null
+          cidade?: string | null
+          created_at?: string | null
+          id: string
+          idade?: number | null
+          nome_completo?: string | null
+          nome_responsavel?: string | null
+          Status?: string | null
+          telefone_responsavel?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          bairro?: string | null
+          cidade?: string | null
+          created_at?: string | null
+          id?: string
+          idade?: number | null
+          nome_completo?: string | null
+          nome_responsavel?: string | null
+          Status?: string | null
+          telefone_responsavel?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       fichas_apoio: {
         Row: {
           arroba_instagram: string | null
@@ -134,13 +197,13 @@ export type Database = {
           data_nascimento: string
           endereco_completo_surfista: string
           escola_serie_ano: string
-          fez_crisma: boolean
-          fez_primeira_comunhao: boolean
+          fez_crisma: string
+          fez_primeira_comunhao: string
           fobia: string | null
           id: string
           informacao_adicional_surfista: string | null
           instrumento: string | null
-          irmaos: number | null
+          irmaos: string | null
           medicamento: string | null
           nome_mae: string
           nome_pai: string
@@ -159,13 +222,13 @@ export type Database = {
           data_nascimento: string
           endereco_completo_surfista: string
           escola_serie_ano: string
-          fez_crisma: boolean
-          fez_primeira_comunhao: boolean
+          fez_crisma: string
+          fez_primeira_comunhao: string
           fobia?: string | null
           id?: string
           informacao_adicional_surfista?: string | null
           instrumento?: string | null
-          irmaos?: number | null
+          irmaos?: string | null
           medicamento?: string | null
           nome_mae: string
           nome_pai: string
@@ -184,13 +247,13 @@ export type Database = {
           data_nascimento?: string
           endereco_completo_surfista?: string
           escola_serie_ano?: string
-          fez_crisma?: boolean
-          fez_primeira_comunhao?: boolean
+          fez_crisma?: string
+          fez_primeira_comunhao?: string
           fobia?: string | null
           id?: string
           informacao_adicional_surfista?: string | null
           instrumento?: string | null
-          irmaos?: number | null
+          irmaos?: string | null
           medicamento?: string | null
           nome_mae?: string
           nome_pai?: string
@@ -392,7 +455,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      unaccent: {
+        Args: { "": string }
+        Returns: string
+      }
+      unaccent_init: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
     }
     Enums: {
       permissao_tipo: "supreme" | "admin" | "user"

@@ -1,50 +1,11 @@
 
-import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogIn, LogOut, Users, Calendar, Waves, LifeBuoy, Crown } from 'lucide-react';
+import { Users, Calendar, Waves, LifeBuoy, Crown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Sidebar from '@/components/dashboard/Sidebar';
 
 const Index = () => {
-  const { user, loading, signOut, userProfile } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Carregando...</div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ocean-50 to-sunset-50">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-ocean-800">
-              Retiro Onda Xangri-lá 2025
-            </CardTitle>
-            <CardDescription>
-              Sistema de gerenciamento interno
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-center text-gray-600">
-              Faça login para acessar o sistema de gerenciamento do retiro.
-            </p>
-            <Link to="/auth" className="block">
-              <Button className="w-full">
-                <LogIn className="mr-2 h-4 w-4" />
-                Fazer Login
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
@@ -53,16 +14,12 @@ const Index = () => {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">
-                Bem-vindo, {userProfile?.nome_completo || user.email}!
+                Retiro Onda Xangri-lá 2025
               </h1>
               <p className="text-muted-foreground">
                 Sistema de gerenciamento do Retiro Onda Xangri-lá 2025
               </p>
             </div>
-            <Button variant="outline" onClick={signOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </Button>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -136,21 +93,19 @@ const Index = () => {
               </Card>
             </Link>
 
-            {userProfile?.permissao === 'supreme' && (
-              <Link to="/usuarios">
-                <Card className="hover:shadow-md transition-shadow cursor-pointer border-purple-200">
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Users className="mr-2 h-5 w-5 text-purple-600" />
-                      Usuários
-                    </CardTitle>
-                    <CardDescription>
-                      Gerencie usuários do sistema (Supremo)
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-              </Link>
-            )}
+            <Link to="/usuarios">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Users className="mr-2 h-5 w-5 text-purple-600" />
+                    Usuários
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie usuários do sistema
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
           </div>
         </main>
       </div>
