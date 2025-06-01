@@ -6,19 +6,27 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
 
-interface EventFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  event?: any;
-  onSave: () => void;
+interface SimpleEvent {
+  id?: string;
+  titulo: string;
+  descricao: string;
+  data_evento: string;
+  hora_inicio: string;
+  hora_fim: string;
+  tipo_evento: string;
+  criado_por: string;
 }
 
-const EventForm = ({ open, onOpenChange, event, onSave }: EventFormProps) => {
-  const [loading, setLoading] = useState(false);
+interface SimpleEventFormProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  event?: SimpleEvent;
+  onSave: (event: SimpleEvent) => void;
+}
+
+const SimpleEventForm = ({ open, onOpenChange, event, onSave }: SimpleEventFormProps) => {
   const [formData, setFormData] = useState({
     titulo: event?.titulo || '',
     descricao: event?.descricao || '',
@@ -26,48 +34,29 @@ const EventForm = ({ open, onOpenChange, event, onSave }: EventFormProps) => {
     hora_inicio: event?.hora_inicio || '',
     hora_fim: event?.hora_fim || '',
     tipo_evento: event?.tipo_evento || 'evento',
+    criado_por: event?.criado_por || 'Sistema',
   });
   
   const { toast } = useToast();
-  const { userProfile } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
-    try {
-      if (event) {
-        // Editar evento existente
-        const { error } = await supabase
-          .from('eventos_agenda')
-          .update(formData)
-          .eq('id', event.id);
-          
-        if (error) throw error;
-        
-        toast({
-          title: "Evento atualizado com sucesso!",
-        });
-      } else {
-        // Criar novo evento
-        const { error } = await supabase
-          .from('eventos_agenda')
-          .insert({
-            ...formData,
-            criado_por: userProfile?.id,
-          });
-          
-        if (error) throw error;
-        
-        toast({
-          title: "Evento criado com sucesso!",
-        });
-      }
-      
-      onSave();
-      onOpenChange(false);
-      
-      // Resetar formulário
+    
+    const newEvent: SimpleEvent = {
+      ...formData,
+      id: event?.id || `event_${Date.now()}`,
+    };
+    
+    onSave(newEvent);
+    onOpenChange(false);
+    
+    toast({
+      title: event ? "Evento atualizado!" : "Evento criado!",
+      description: "As alterações foram salvas com sucesso.",
+    });
+    
+    // Resetar formulário se for novo evento
+    if (!event) {
       setFormData({
         titulo: '',
         descricao: '',
@@ -75,15 +64,8 @@ const EventForm = ({ open, onOpenChange, event, onSave }: EventFormProps) => {
         hora_inicio: '',
         hora_fim: '',
         tipo_evento: 'evento',
+        criado_por: 'Sistema',
       });
-    } catch (error: any) {
-      toast({
-        title: "Erro ao salvar evento",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -165,6 +147,15 @@ const EventForm = ({ open, onOpenChange, event, onSave }: EventFormProps) => {
               />
             </div>
           </div>
+          
+          <div>
+            <Label htmlFor="criado_por">Criado por</Label>
+            <Input
+              id="criado_por"
+              value={formData.criado_por}
+              onChange={(e) => setFormData({ ...formData, criado_por: e.target.value })}
+            />
+          </div>
         </form>
         
         <DialogFooter>
@@ -175,8 +166,8 @@ const EventForm = ({ open, onOpenChange, event, onSave }: EventFormProps) => {
           >
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Salvando...' : (event ? 'Atualizar' : 'Criar')}
+          <Button onClick={handleSubmit}>
+            {event ? 'Atualizar' : 'Criar'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -184,4 +175,4 @@ const EventForm = ({ open, onOpenChange, event, onSave }: EventFormProps) => {
   );
 };
 
-export default EventForm;
+export default SimpleEventForm;
