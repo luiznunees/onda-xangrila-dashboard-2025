@@ -10,6 +10,7 @@ import {
   Users,
   User,
   UserPlus,
+  UserCheck,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -30,6 +31,7 @@ const userPermission = 'supreme'; // Pode ser 'supreme', 'admin', 'user'
 const navigation: NavigationItem[] = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Pré-Inscrições', href: '/pre-inscricoes', icon: UserPlus },
+  { name: 'Confirmados', href: '/confirmados', icon: UserCheck },
   { name: 'Surfistas', href: '/surfistas', icon: User },
   { name: 'Apoio', href: '/apoio', icon: Users },
   { name: 'Marujos', href: '/marujos', icon: Users },
