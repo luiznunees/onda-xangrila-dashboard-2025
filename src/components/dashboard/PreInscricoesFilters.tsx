@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -133,8 +134,10 @@ const PreInscricoesFilters = ({ data, onFilteredDataChange }: PreInscricoesFilte
       let valueB = b[sortBy as keyof PreInscricao];
       
       if (sortBy === 'created_at') {
-        valueA = new Date(valueA as string);
-        valueB = new Date(valueB as string);
+        const dateA = new Date(valueA as string);
+        const dateB = new Date(valueB as string);
+        valueA = dateA.getTime();
+        valueB = dateB.getTime();
       }
       
       if (sortBy === 'idade') {
