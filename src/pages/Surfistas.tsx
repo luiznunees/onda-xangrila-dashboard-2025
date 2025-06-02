@@ -5,12 +5,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import Sidebar from '@/components/dashboard/Sidebar';
 import DataTable from '@/components/dashboard/DataTable';
+import SurfistasFilters from '@/components/dashboard/SurfistasFilters';
+import SurfistaDetailModal from '@/components/dashboard/SurfistaDetailModal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, Waves, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-// Tipo para surfistas
+// Tipo para surfistas com novos campos
 type Surfista = {
   id: string;
   nome_surfista: string;
@@ -32,6 +34,19 @@ type Surfista = {
   fez_crisma: boolean;
   fez_primeira_comunhao: boolean;
   telefone_surfista: string;
+  endereco_completo_surfista: string;
+  nome_pai: string;
+  telefone_pai: string;
+  nome_mae: string;
+  telefone_mae: string;
+  rg_cpf_surfista: string | null;
+  informacao_adicional_surfista: string | null;
+  status_inscricao: string | null;
+  tipo_pagamento: string | null;
+  status_pagamento: string | null;
+  comprovante_url: string | null;
+  foto_url: string | null;
+  created_at: string;
 };
 
 // Função para calcular a idade a partir da data de nascimento
@@ -50,6 +65,9 @@ const calcularIdade = (dataNascimento: string): number => {
 
 const Surfistas = () => {
   const { toast } = useToast();
+  const [filteredData, setFilteredData] = useState<Surfista[]>([]);
+  const [selectedSurfista, setSelectedSurfista] = useState<Surfista | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const fetchSurfistas = async () => {
     try {
@@ -122,6 +140,36 @@ const Surfistas = () => {
     return `https://wa.me/${numeros}`;
   };
 
+  // Função para exibir badge de status
+  const getStatusBadge = (status: string, type: 'inscricao' | 'pagamento') => {
+    const statusConfig = {
+      inscricao: {
+        'pendente': { label: 'Pendente', color: 'bg-yellow-100 text-yellow-800' },
+        'confirmado': { label: 'Confirmado', color: 'bg-green-100 text-green-800' },
+        'lista_espera': { label: 'Lista de Espera', color: 'bg-orange-100 text-orange-800' }
+      },
+      pagamento: {
+        'nao_pago': { label: 'Não Pago', color: 'bg-red-100 text-red-800' },
+        'pendente': { label: 'Pendente', color: 'bg-yellow-100 text-yellow-800' },
+        'pago': { label: 'Pago', color: 'bg-green-100 text-green-800' }
+      }
+    };
+
+    const config = statusConfig[type][status as keyof typeof statusConfig[typeof type]];
+    return config ? (
+      <Badge variant="outline" className={config.color}>
+        {config.label}
+      </Badge>
+    ) : <span>-</span>;
+  };
+
+  const handleViewDetails = (row: any) => {
+    setSelectedSurfista(row);
+    setIsDetailModalOpen(true);
+  };
+
+  const dataToDisplay = filteredData.length > 0 ? filteredData : dadosProcessados;
+
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
@@ -132,7 +180,7 @@ const Surfistas = () => {
             <div className="flex items-center space-x-3">
               <div className="flex items-center space-x-2">
                 <Waves className="h-5 w-5 text-ocean-600" />
-                <span className="font-medium">Total: {surfistas?.length || 0} surfistas</span>
+                <span className="font-medium">Total: {dataToDisplay?.length || 0} surfistas</span>
               </div>
               <Button onClick={() => handleExport('pdf')} variant="outline" size="sm">
                 <Download className="mr-2 h-4 w-4" />
@@ -140,6 +188,12 @@ const Surfistas = () => {
               </Button>
             </div>
           </div>
+
+          {/* Filtros */}
+          <SurfistasFilters 
+            data={dadosProcessados}
+            onFilteredDataChange={setFilteredData}
+          />
           
           <div className="mb-6">
             {isLoading ? (
@@ -149,10 +203,20 @@ const Surfistas = () => {
             ) : (
               <DataTable 
                 title="Lista de Surfistas"
-                data={dadosProcessados}
+                data={dataToDisplay}
                 columns={[
                   { accessor: 'nome_surfista', header: 'Nome' },
                   { accessor: 'idade', header: 'Idade' },
+                  { 
+                    accessor: 'status_inscricao', 
+                    header: 'Status Inscrição',
+                    cell: (value) => getStatusBadge(value || 'pendente', 'inscricao')
+                  },
+                  { 
+                    accessor: 'status_pagamento', 
+                    header: 'Status Pagamento',
+                    cell: (value) => getStatusBadge(value || 'nao_pago', 'pagamento')
+                  },
                   { 
                     accessor: 'telefone_surfista', 
                     header: 'WhatsApp',
@@ -183,41 +247,30 @@ const Surfistas = () => {
                       </Badge>
                     )
                   },
-                  { 
-                    accessor: 'escola_serie_ano', 
-                    header: 'Escola/Série',
-                  },
                 ]}
-                detailFields={[
-                  { label: 'Nome', accessor: 'nome_surfista' },
-                  { label: 'Data de Nascimento', accessor: 'data_nascimento', 
-                    render: (value) => new Date(value).toLocaleDateString('pt-BR') },
-                  { label: 'Idade', accessor: 'idade' },
-                  { label: 'WhatsApp', accessor: 'telefone_surfista' },
-                  { label: 'Instagram', accessor: 'arroba_instagram',
-                    render: (value, row) => row.tem_instagram ? value : 'Não possui' },
-                  { label: 'Escola/Série', accessor: 'escola_serie_ano' },
-                  { label: 'Tamanho da Camiseta', accessor: 'tamanho_camiseta_surfista' },
-                  { label: 'Toca Instrumento', accessor: 'toca_instrumento', 
-                    render: (value, row) => value ? `Sim (${row.instrumento_qual})` : 'Não' },
-                  { label: 'Tem Irmãos', accessor: 'tem_irmaos',
-                    render: (value, row) => value ? `Sim (${row.quantidade_irmaos})` : 'Não' },
-                  { label: 'Toma Medicamento', accessor: 'toma_medicamento_continuo',
-                    render: (value, row) => value ? `Sim (${row.medicamento_qual})` : 'Não' },
-                  { label: 'Tem Alergia', accessor: 'tem_alergia',
-                    render: (value, row) => value ? `Sim (${row.alergia_qual})` : 'Não' },
-                  { label: 'Tem Fobia', accessor: 'tem_fobia',
-                    render: (value, row) => value ? `Sim (${row.fobia_qual})` : 'Não' },
-                  { label: 'Fez Primeira Comunhão', accessor: 'fez_primeira_comunhao',
-                    render: (value) => value ? 'Sim' : 'Não' },
-                  { label: 'Fez Crisma', accessor: 'fez_crisma',
-                    render: (value) => value ? 'Sim' : 'Não' }
-                ]}
-                onExport={handleExport}
                 onDelete={handleDelete}
+                onViewDetails={handleViewDetails}
               />
             )}
           </div>
+
+          {/* Modal de detalhes */}
+          <SurfistaDetailModal
+            surfista={selectedSurfista}
+            isOpen={isDetailModalOpen}
+            onClose={() => {
+              setIsDetailModalOpen(false);
+              setSelectedSurfista(null);
+            }}
+            onUpdate={() => {
+              refetch();
+              // Atualizar os dados filtrados também
+              const updated = dadosProcessados.map(s => 
+                s.id === selectedSurfista?.id ? { ...selectedSurfista, ...s } : s
+              );
+              setFilteredData(updated.filter(s => filteredData.find(f => f.id === s.id)));
+            }}
+          />
         </main>
       </div>
     </div>

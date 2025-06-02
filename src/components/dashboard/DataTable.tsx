@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import {
   Table,
@@ -67,6 +68,7 @@ interface DataTableProps {
   filters?: React.ReactNode;
   detailFields?: DetailField[];
   onDelete?: (id: string) => Promise<void>;
+  onViewDetails?: (row: any) => void;
 }
 
 export function DataTable({
@@ -77,6 +79,7 @@ export function DataTable({
   filters,
   detailFields,
   onDelete,
+  onViewDetails,
 }: DataTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -134,8 +137,12 @@ export function DataTable({
   };
 
   const handleViewDetails = (row: any) => {
-    setSelectedRow(row);
-    setIsDetailDialogOpen(true);
+    if (onViewDetails) {
+      onViewDetails(row);
+    } else {
+      setSelectedRow(row);
+      setIsDetailDialogOpen(true);
+    }
   };
 
   const handleDeleteClick = (id: string) => {
@@ -284,38 +291,40 @@ export function DataTable({
         </div>
       </CardFooter>
 
-      {/* Modal para detalhes */}
-      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detalhes</DialogTitle>
-            <DialogDescription>
-              Informações completas do registro
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedRow && detailFields && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-              {detailFields.map((field, index) => (
-                <div key={index} className="flex flex-col">
-                  <span className="text-sm font-medium text-muted-foreground">{field.label}</span>
-                  <span className="text-sm">
-                    {field.render
-                      ? field.render(selectedRow[field.accessor], selectedRow)
-                      : selectedRow[field.accessor] ?? '-'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-          
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Fechar</Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Modal para detalhes (fallback case) */}
+      {!onViewDetails && (
+        <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Detalhes</DialogTitle>
+              <DialogDescription>
+                Informações completas do registro
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedRow && detailFields && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                {detailFields.map((field, index) => (
+                  <div key={index} className="flex flex-col">
+                    <span className="text-sm font-medium text-muted-foreground">{field.label}</span>
+                    <span className="text-sm">
+                      {field.render
+                        ? field.render(selectedRow[field.accessor], selectedRow)
+                        : selectedRow[field.accessor] ?? '-'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline">Fechar</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Modal de confirmação de exclusão */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
