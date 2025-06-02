@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +28,8 @@ const ConfirmadosFilters = ({ data, onFilteredDataChange }: ConfirmadosFiltersPr
   const [selectedIdades, setSelectedIdades] = useState<string[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const [selectedMeses, setSelectedMeses] = useState<string[]>([]);
-  const [sortOrder, setSortOrder] = useState<string>("newest");
+  const [sortBy, setSortBy] = useState<string>("created_at");
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Função para normalizar texto
   const normalizeText = (text: string): string => {
@@ -96,6 +96,14 @@ const ConfirmadosFilters = ({ data, onFilteredDataChange }: ConfirmadosFiltersPr
     { value: "12", label: "Dezembro" }
   ];
 
+  const sortOptions = [
+    { value: 'created_at', label: 'Data de Confirmação' },
+    { value: 'nome_completo', label: 'Nome' },
+    { value: 'idade', label: 'Idade' },
+    { value: 'cidade', label: 'Cidade' },
+    { value: 'Status', label: 'Status' }
+  ];
+
   // Aplicar filtros e ordenação
   useEffect(() => {
     let filteredData = [...data];
@@ -135,20 +143,35 @@ const ConfirmadosFilters = ({ data, onFilteredDataChange }: ConfirmadosFiltersPr
       });
     }
 
-    // Aplicar ordenação por data
+    // Aplicar ordenação
     filteredData.sort((a, b) => {
-      const dateA = new Date(a.created_at || 0).getTime();
-      const dateB = new Date(b.created_at || 0).getTime();
+      let valueA = a[sortBy as keyof Confirmado];
+      let valueB = b[sortBy as keyof Confirmado];
       
-      if (sortOrder === "newest") {
-        return dateB - dateA; // Mais recentes primeiro
-      } else {
-        return dateA - dateB; // Mais antigas primeiro
+      if (sortBy === 'created_at') {
+        valueA = new Date(valueA as string);
+        valueB = new Date(valueB as string);
       }
+      
+      if (sortBy === 'idade') {
+        valueA = Number(valueA) || 0;
+        valueB = Number(valueB) || 0;
+      }
+      
+      if (typeof valueA === 'string') {
+        valueA = valueA.toLowerCase();
+      }
+      if (typeof valueB === 'string') {
+        valueB = valueB.toLowerCase();
+      }
+
+      if (valueA < valueB) return sortOrder === 'asc' ? -1 : 1;
+      if (valueA > valueB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
     });
 
     onFilteredDataChange(filteredData);
-  }, [selectedCidades, selectedIdades, selectedStatus, selectedMeses, sortOrder, data, onFilteredDataChange]);
+  }, [selectedCidades, selectedIdades, selectedStatus, selectedMeses, sortBy, sortOrder, data, onFilteredDataChange]);
 
   // Limpar todos os filtros
   const clearAllFilters = () => {
@@ -156,7 +179,8 @@ const ConfirmadosFilters = ({ data, onFilteredDataChange }: ConfirmadosFiltersPr
     setSelectedIdades([]);
     setSelectedStatus([]);
     setSelectedMeses([]);
-    setSortOrder("newest");
+    setSortBy("created_at");
+    setSortOrder("desc");
   };
 
   // Contar filtros ativos
@@ -176,7 +200,7 @@ const ConfirmadosFilters = ({ data, onFilteredDataChange }: ConfirmadosFiltersPr
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
           <MultiSelectFilter
-            title="Cidade"
+            label="Cidade"
             options={cidadeOptions}
             selectedValues={selectedCidades}
             onSelectionChange={setSelectedCidades}
@@ -184,7 +208,7 @@ const ConfirmadosFilters = ({ data, onFilteredDataChange }: ConfirmadosFiltersPr
           />
           
           <MultiSelectFilter
-            title="Idade"
+            label="Idade"
             options={idadeOptions}
             selectedValues={selectedIdades}
             onSelectionChange={setSelectedIdades}
@@ -192,7 +216,7 @@ const ConfirmadosFilters = ({ data, onFilteredDataChange }: ConfirmadosFiltersPr
           />
           
           <MultiSelectFilter
-            title="Status"
+            label="Status"
             options={statusOptions}
             selectedValues={selectedStatus}
             onSelectionChange={setSelectedStatus}
@@ -200,7 +224,7 @@ const ConfirmadosFilters = ({ data, onFilteredDataChange }: ConfirmadosFiltersPr
           />
           
           <MultiSelectFilter
-            title="Mês de Confirmação"
+            label="Mês de Confirmação"
             options={mesOptions}
             selectedValues={selectedMeses}
             onSelectionChange={setSelectedMeses}
@@ -208,8 +232,11 @@ const ConfirmadosFilters = ({ data, onFilteredDataChange }: ConfirmadosFiltersPr
           />
 
           <SortSelect
-            value={sortOrder}
-            onValueChange={setSortOrder}
+            options={sortOptions}
+            value={sortBy}
+            order={sortOrder}
+            onValueChange={setSortBy}
+            onOrderChange={setSortOrder}
           />
         </div>
 

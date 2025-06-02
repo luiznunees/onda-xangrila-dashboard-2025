@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +24,7 @@ type Surfista = {
   status_pagamento: string;
   foto_url: string;
   comprovante_url: string;
-  idade?: number; // Make it optional since it's calculated
+  idade?: number;
   // ... outros campos
 };
 
@@ -120,12 +119,6 @@ const Surfistas = () => {
     return `https://wa.me/${numeros}`;
   };
 
-  // Função para abrir detalhes do surfista
-  const handleViewDetails = (row: any) => {
-    setSelectedSurfista(row);
-    setDetailSheetOpen(true);
-  };
-
   // Função para obter badge do status
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -151,6 +144,12 @@ const Surfistas = () => {
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
+  };
+
+  // Função para abrir detalhes do surfista
+  const handleViewDetails = (row: any) => {
+    setSelectedSurfista(row);
+    setDetailSheetOpen(true);
   };
 
   // Estatísticas
@@ -312,7 +311,14 @@ const Surfistas = () => {
                     )
                   },
                 ]}
-                onView={handleViewDetails}
+                detailFields={[
+                  { label: "Nome", accessor: "nome_surfista" },
+                  { label: "Idade", accessor: "idade" },
+                  { label: "Status", accessor: "status_inscricao" },
+                  { label: "Telefone", accessor: "telefone_surfista" },
+                  { label: "Status Pagamento", accessor: "status_pagamento" },
+                  { label: "Tamanho Camiseta", accessor: "tamanho_camiseta_surfista" }
+                ]}
                 onExport={handleExport}
                 onDelete={handleDelete}
               />
