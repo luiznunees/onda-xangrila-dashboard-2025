@@ -193,7 +193,6 @@ export type Database = {
         Row: {
           alergia: string | null
           arroba_instagram: string | null
-          comprovante_url: string | null
           created_at: string | null
           data_nascimento: string
           endereco_completo_surfista: string
@@ -201,7 +200,6 @@ export type Database = {
           fez_crisma: string
           fez_primeira_comunhao: string
           fobia: string | null
-          foto_url: string | null
           id: string
           informacao_adicional_surfista: string | null
           instrumento: string | null
@@ -211,19 +209,15 @@ export type Database = {
           nome_pai: string
           nome_surfista: string
           rg_cpf_surfista: string | null
-          status_inscricao: string | null
-          status_pagamento: string | null
           tamanho_camiseta_surfista: string
           telefone_mae: string
           telefone_pai: string
           telefone_surfista: string
-          tipo_pagamento: string | null
           updated_at: string | null
         }
         Insert: {
           alergia?: string | null
           arroba_instagram?: string | null
-          comprovante_url?: string | null
           created_at?: string | null
           data_nascimento: string
           endereco_completo_surfista: string
@@ -231,7 +225,6 @@ export type Database = {
           fez_crisma: string
           fez_primeira_comunhao: string
           fobia?: string | null
-          foto_url?: string | null
           id?: string
           informacao_adicional_surfista?: string | null
           instrumento?: string | null
@@ -241,19 +234,15 @@ export type Database = {
           nome_pai: string
           nome_surfista: string
           rg_cpf_surfista?: string | null
-          status_inscricao?: string | null
-          status_pagamento?: string | null
           tamanho_camiseta_surfista: string
           telefone_mae: string
           telefone_pai: string
           telefone_surfista: string
-          tipo_pagamento?: string | null
           updated_at?: string | null
         }
         Update: {
           alergia?: string | null
           arroba_instagram?: string | null
-          comprovante_url?: string | null
           created_at?: string | null
           data_nascimento?: string
           endereco_completo_surfista?: string
@@ -261,7 +250,6 @@ export type Database = {
           fez_crisma?: string
           fez_primeira_comunhao?: string
           fobia?: string | null
-          foto_url?: string | null
           id?: string
           informacao_adicional_surfista?: string | null
           instrumento?: string | null
@@ -271,13 +259,10 @@ export type Database = {
           nome_pai?: string
           nome_surfista?: string
           rg_cpf_surfista?: string | null
-          status_inscricao?: string | null
-          status_pagamento?: string | null
           tamanho_camiseta_surfista?: string
           telefone_mae?: string
           telefone_pai?: string
           telefone_surfista?: string
-          tipo_pagamento?: string | null
           updated_at?: string | null
         }
         Relationships: []

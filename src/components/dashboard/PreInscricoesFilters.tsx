@@ -27,8 +27,7 @@ const PreInscricoesFilters = ({ data, onFilteredDataChange }: PreInscricoesFilte
   const [selectedCidades, setSelectedCidades] = useState<string[]>([]);
   const [selectedIdades, setSelectedIdades] = useState<string[]>([]);
   const [selectedMeses, setSelectedMeses] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<string>("created_at");
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortOrder, setSortOrder] = useState<string>("newest");
 
   // Função para normalizar texto
   const normalizeText = (text: string): string => {
@@ -91,13 +90,6 @@ const PreInscricoesFilters = ({ data, onFilteredDataChange }: PreInscricoesFilte
     { value: "12", label: "Dezembro" }
   ];
 
-  const sortOptions = [
-    { value: 'created_at', label: 'Data de Inscrição' },
-    { value: 'nome_completo', label: 'Nome' },
-    { value: 'idade', label: 'Idade' },
-    { value: 'cidade', label: 'Cidade' }
-  ];
-
   // Aplicar filtros e ordenação
   useEffect(() => {
     let filteredData = [...data];
@@ -128,45 +120,27 @@ const PreInscricoesFilters = ({ data, onFilteredDataChange }: PreInscricoesFilte
       });
     }
 
-    // Aplicar ordenação
+    // Aplicar ordenação por data
     filteredData.sort((a, b) => {
-      let valueA = a[sortBy as keyof PreInscricao];
-      let valueB = b[sortBy as keyof PreInscricao];
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
       
-      if (sortBy === 'created_at') {
-        const dateA = new Date(valueA as string);
-        const dateB = new Date(valueB as string);
-        valueA = dateA.getTime();
-        valueB = dateB.getTime();
+      if (sortOrder === "newest") {
+        return dateB - dateA; // Mais recentes primeiro
+      } else {
+        return dateA - dateB; // Mais antigas primeiro
       }
-      
-      if (sortBy === 'idade') {
-        valueA = Number(valueA) || 0;
-        valueB = Number(valueB) || 0;
-      }
-      
-      if (typeof valueA === 'string') {
-        valueA = valueA.toLowerCase();
-      }
-      if (typeof valueB === 'string') {
-        valueB = valueB.toLowerCase();
-      }
-
-      if (valueA < valueB) return sortOrder === 'asc' ? -1 : 1;
-      if (valueA > valueB) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
     });
 
     onFilteredDataChange(filteredData);
-  }, [selectedCidades, selectedIdades, selectedMeses, sortBy, sortOrder, data, onFilteredDataChange]);
+  }, [selectedCidades, selectedIdades, selectedMeses, sortOrder, data, onFilteredDataChange]);
 
   // Limpar todos os filtros
   const clearAllFilters = () => {
     setSelectedCidades([]);
     setSelectedIdades([]);
     setSelectedMeses([]);
-    setSortBy("created_at");
-    setSortOrder("desc");
+    setSortOrder("newest");
   };
 
   // Contar filtros ativos
@@ -186,7 +160,7 @@ const PreInscricoesFilters = ({ data, onFilteredDataChange }: PreInscricoesFilte
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <MultiSelectFilter
-            label="Cidade"
+            title="Cidade"
             options={cidadeOptions}
             selectedValues={selectedCidades}
             onSelectionChange={setSelectedCidades}
@@ -194,7 +168,7 @@ const PreInscricoesFilters = ({ data, onFilteredDataChange }: PreInscricoesFilte
           />
           
           <MultiSelectFilter
-            label="Idade"
+            title="Idade"
             options={idadeOptions}
             selectedValues={selectedIdades}
             onSelectionChange={setSelectedIdades}
@@ -202,7 +176,7 @@ const PreInscricoesFilters = ({ data, onFilteredDataChange }: PreInscricoesFilte
           />
           
           <MultiSelectFilter
-            label="Mês de Inscrição"
+            title="Mês de Inscrição"
             options={mesOptions}
             selectedValues={selectedMeses}
             onSelectionChange={setSelectedMeses}
@@ -210,11 +184,8 @@ const PreInscricoesFilters = ({ data, onFilteredDataChange }: PreInscricoesFilte
           />
 
           <SortSelect
-            options={sortOptions}
-            value={sortBy}
-            order={sortOrder}
-            onValueChange={setSortBy}
-            onOrderChange={setSortOrder}
+            value={sortOrder}
+            onValueChange={setSortOrder}
           />
         </div>
 

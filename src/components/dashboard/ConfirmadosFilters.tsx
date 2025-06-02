@@ -27,22 +27,57 @@ interface ConfirmadosFiltersProps {
 const ConfirmadosFilters = ({ data, onFilteredDataChange }: ConfirmadosFiltersProps) => {
   const [selectedCidades, setSelectedCidades] = useState<string[]>([]);
   const [selectedIdades, setSelectedIdades] = useState<string[]>([]);
-  const [selectedMeses, setSelectedMeses] = useState<string[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<string>("created_at");
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [selectedMeses, setSelectedMeses] = useState<string[]>([]);
+  const [sortOrder, setSortOrder] = useState<string>("newest");
 
-  // Gerar opções únicas para filtros
-  const cidadeOptions = Array.from(new Set(data.map(item => item.cidade)))
+  // Função para normalizar texto
+  const normalizeText = (text: string): string => {
+    return text
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/\s+/g, ' '); // Remove espaços extras
+  };
+
+  // Função para encontrar a cidade mais comum com essa normalização
+  const getMostCommonCity = (normalizedCity: string, cities: string[]): string => {
+    const matchingCities = cities.filter(city => 
+      normalizeText(city) === normalizedCity
+    );
+    
+    const cityCount = matchingCities.reduce((acc, city) => {
+      acc[city] = (acc[city] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return Object.entries(cityCount)
+      .sort(([,a], [,b]) => b - a)[0][0];
+  };
+
+  // Gerar opções únicas para cidades (normalizadas)
+  const allCities = data.map(item => item.cidade).filter(Boolean);
+  const normalizedCityMap = new Map<string, string>();
+  
+  allCities.forEach(city => {
+    const normalized = normalizeText(city);
+    if (!normalizedCityMap.has(normalized)) {
+      normalizedCityMap.set(normalized, getMostCommonCity(normalized, allCities));
+    }
+  });
+
+  const cidadeOptions = Array.from(normalizedCityMap.values())
     .sort()
     .map(cidade => ({ value: cidade, label: cidade }));
 
-  const idadeOptions = Array.from(new Set(data.map(item => item.idade)))
+  const idadeOptions = Array.from(new Set(data.map(item => item.idade).filter(Boolean)))
     .sort((a, b) => a - b)
     .map(idade => ({ value: idade.toString(), label: `${idade} anos` }));
 
-  const statusOptions = Array.from(new Set(data.map(item => item.Status)))
-    .filter(Boolean)
+  // Opções de status únicos
+  const statusOptions = Array.from(new Set(data.map(item => item.Status).filter(Boolean)))
+    .sort()
     .map(status => ({ value: status, label: status }));
 
   // Opções de mês para filtro por data
@@ -61,87 +96,71 @@ const ConfirmadosFilters = ({ data, onFilteredDataChange }: ConfirmadosFiltersPr
     { value: "12", label: "Dezembro" }
   ];
 
-  const sortOptions = [
-    { value: 'created_at', label: 'Data de Confirmação' },
-    { value: 'nome_completo', label: 'Nome' },
-    { value: 'idade', label: 'Idade' },
-    { value: 'cidade', label: 'Cidade' }
-  ];
-
   // Aplicar filtros e ordenação
   useEffect(() => {
     let filteredData = [...data];
 
-    // Filtro por cidade
+    // Filtro por cidade (considerando normalização)
     if (selectedCidades.length > 0) {
-      filteredData = filteredData.filter(item => selectedCidades.includes(item.cidade));
+      filteredData = filteredData.filter(item => {
+        if (!item.cidade) return false;
+        const normalizedItemCity = normalizeText(item.cidade);
+        return selectedCidades.some(selectedCity => 
+          normalizeText(selectedCity) === normalizedItemCity
+        );
+      });
     }
 
     // Filtro por idade
     if (selectedIdades.length > 0) {
       filteredData = filteredData.filter(item => 
-        selectedIdades.includes(item.idade.toString())
+        item.idade && selectedIdades.includes(item.idade.toString())
       );
     }
 
     // Filtro por status
     if (selectedStatus.length > 0) {
-      filteredData = filteredData.filter(item => selectedStatus.includes(item.Status));
+      filteredData = filteredData.filter(item => 
+        item.Status && selectedStatus.includes(item.Status)
+      );
     }
 
     // Filtro por mês de confirmação
     if (selectedMeses.length > 0) {
       filteredData = filteredData.filter(item => {
+        if (!item.created_at) return false;
         const mesConfirmacao = new Date(item.created_at).getMonth() + 1;
         const mesString = mesConfirmacao.toString().padStart(2, '0');
         return selectedMeses.includes(mesString);
       });
     }
 
-    // Aplicar ordenação
+    // Aplicar ordenação por data
     filteredData.sort((a, b) => {
-      let valueA = a[sortBy as keyof Confirmado];
-      let valueB = b[sortBy as keyof Confirmado];
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
       
-      if (sortBy === 'created_at') {
-        const dateA = new Date(valueA as string);
-        const dateB = new Date(valueB as string);
-        valueA = dateA.getTime();
-        valueB = dateB.getTime();
+      if (sortOrder === "newest") {
+        return dateB - dateA; // Mais recentes primeiro
+      } else {
+        return dateA - dateB; // Mais antigas primeiro
       }
-      
-      if (sortBy === 'idade') {
-        valueA = Number(valueA) || 0;
-        valueB = Number(valueB) || 0;
-      }
-      
-      if (typeof valueA === 'string') {
-        valueA = valueA.toLowerCase();
-      }
-      if (typeof valueB === 'string') {
-        valueB = valueB.toLowerCase();
-      }
-
-      if (valueA < valueB) return sortOrder === 'asc' ? -1 : 1;
-      if (valueA > valueB) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
     });
 
     onFilteredDataChange(filteredData);
-  }, [selectedCidades, selectedIdades, selectedMeses, selectedStatus, sortBy, sortOrder, data, onFilteredDataChange]);
+  }, [selectedCidades, selectedIdades, selectedStatus, selectedMeses, sortOrder, data, onFilteredDataChange]);
 
   // Limpar todos os filtros
   const clearAllFilters = () => {
     setSelectedCidades([]);
     setSelectedIdades([]);
-    setSelectedMeses([]);
     setSelectedStatus([]);
-    setSortBy("created_at");
-    setSortOrder("desc");
+    setSelectedMeses([]);
+    setSortOrder("newest");
   };
 
   // Contar filtros ativos
-  const activeFiltersCount = selectedCidades.length + selectedIdades.length + selectedMeses.length + selectedStatus.length;
+  const activeFiltersCount = selectedCidades.length + selectedIdades.length + selectedStatus.length + selectedMeses.length;
 
   return (
     <Card className="mb-6">
@@ -155,9 +174,9 @@ const ConfirmadosFilters = ({ data, onFilteredDataChange }: ConfirmadosFiltersPr
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
           <MultiSelectFilter
-            label="Cidade"
+            title="Cidade"
             options={cidadeOptions}
             selectedValues={selectedCidades}
             onSelectionChange={setSelectedCidades}
@@ -165,15 +184,15 @@ const ConfirmadosFilters = ({ data, onFilteredDataChange }: ConfirmadosFiltersPr
           />
           
           <MultiSelectFilter
-            label="Idade"
+            title="Idade"
             options={idadeOptions}
             selectedValues={selectedIdades}
             onSelectionChange={setSelectedIdades}
             placeholder="Todas as idades"
           />
-
+          
           <MultiSelectFilter
-            label="Status"
+            title="Status"
             options={statusOptions}
             selectedValues={selectedStatus}
             onSelectionChange={setSelectedStatus}
@@ -181,26 +200,21 @@ const ConfirmadosFilters = ({ data, onFilteredDataChange }: ConfirmadosFiltersPr
           />
           
           <MultiSelectFilter
-            label="Mês de Confirmação"
+            title="Mês de Confirmação"
             options={mesOptions}
             selectedValues={selectedMeses}
             onSelectionChange={setSelectedMeses}
             placeholder="Todos os meses"
           />
-        </div>
 
-        <div className="mb-4">
           <SortSelect
-            options={sortOptions}
-            value={sortBy}
-            order={sortOrder}
-            onValueChange={setSortBy}
-            onOrderChange={setSortOrder}
+            value={sortOrder}
+            onValueChange={setSortOrder}
           />
         </div>
 
         {activeFiltersCount > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-muted-foreground">Filtros ativos:</span>
             
             {selectedCidades.map(cidade => (
@@ -222,7 +236,7 @@ const ConfirmadosFilters = ({ data, onFilteredDataChange }: ConfirmadosFiltersPr
                 />
               </Badge>
             ))}
-
+            
             {selectedStatus.map(status => (
               <Badge key={`status-${status}`} variant="outline" className="gap-1">
                 {status}

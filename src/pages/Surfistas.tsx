@@ -1,13 +1,12 @@
+
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import Sidebar from '@/components/dashboard/Sidebar';
 import DataTable from '@/components/dashboard/DataTable';
-import SurfistasFilters from '@/components/dashboard/SurfistasFilters';
-import SurfistaDetailSheet from '@/components/dashboard/SurfistaDetailSheet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Waves, Download, UserCheck, Clock, AlertCircle, Camera } from 'lucide-react';
+import { Check, Waves, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -16,16 +15,23 @@ type Surfista = {
   id: string;
   nome_surfista: string;
   data_nascimento: string;
-  telefone_surfista: string;
-  tamanho_camiseta_surfista: string;
+  tem_instagram: boolean;
+  arroba_instagram: string | null;
   escola_serie_ano: string;
-  status_inscricao: string;
-  tipo_pagamento: string;
-  status_pagamento: string;
-  foto_url: string;
-  comprovante_url: string;
-  idade?: number;
-  // ... outros campos
+  tamanho_camiseta_surfista: string;
+  toca_instrumento: boolean;
+  instrumento_qual: string | null;
+  tem_irmaos: boolean;
+  quantidade_irmaos: number | null;
+  toma_medicamento_continuo: boolean;
+  medicamento_qual: string | null;
+  tem_alergia: boolean;
+  alergia_qual: string | null;
+  tem_fobia: boolean;
+  fobia_qual: string | null;
+  fez_crisma: boolean;
+  fez_primeira_comunhao: boolean;
+  telefone_surfista: string;
 };
 
 // Função para calcular a idade a partir da data de nascimento
@@ -44,9 +50,6 @@ const calcularIdade = (dataNascimento: string): number => {
 
 const Surfistas = () => {
   const { toast } = useToast();
-  const [filteredData, setFilteredData] = useState<Surfista[]>([]);
-  const [selectedSurfista, setSelectedSurfista] = useState<Surfista | null>(null);
-  const [detailSheetOpen, setDetailSheetOpen] = useState(false);
 
   const fetchSurfistas = async () => {
     try {
@@ -84,6 +87,7 @@ const Surfistas = () => {
       
       if (error) throw error;
       
+      // Recarregar os dados após exclusão
       refetch();
     } catch (error) {
       console.error('Erro ao excluir surfista:', error);
@@ -101,9 +105,6 @@ const Surfistas = () => {
     ...surfista,
     idade: calcularIdade(surfista.data_nascimento),
   })) || [];
-
-  // Dados para exibir (filtrados ou todos)
-  const dataToDisplay = filteredData.length > 0 || dadosProcessados?.length === 0 ? filteredData : dadosProcessados || [];
   
   // Função para exportar
   const handleExport = (format: 'csv' | 'pdf') => {
@@ -111,55 +112,14 @@ const Surfistas = () => {
       title: `Exportando em formato ${format.toUpperCase()}`,
       description: "Arquivo sendo gerado para download",
     });
+    // Implementação real da exportação seria feita aqui
   };
   
   // Função para criar link do WhatsApp
   const formatWhatsAppLink = (numero: string) => {
+    // Remove caracteres não numéricos
     const numeros = numero.replace(/\D/g, '');
     return `https://wa.me/${numeros}`;
-  };
-
-  // Função para obter badge do status
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'confirmado':
-        return <Badge className="bg-green-100 text-green-800">Confirmado</Badge>;
-      case 'pendente':
-        return <Badge variant="secondary">Pendente</Badge>;
-      case 'lista_espera':
-        return <Badge variant="outline">Lista de Espera</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
-  const getPaymentStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pago':
-        return <Badge className="bg-green-100 text-green-800">Pago</Badge>;
-      case 'pendente':
-        return <Badge variant="secondary">Pendente</Badge>;
-      case 'nao_pago':
-        return <Badge variant="destructive">Não Pago</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
-  // Função para abrir detalhes do surfista
-  const handleViewDetails = (row: any) => {
-    setSelectedSurfista(row);
-    setDetailSheetOpen(true);
-  };
-
-  // Estatísticas
-  const stats = {
-    total: dataToDisplay.length,
-    confirmados: dataToDisplay.filter(s => s.status_inscricao === 'confirmado').length,
-    pendentes: dataToDisplay.filter(s => s.status_inscricao === 'pendente').length,
-    listaEspera: dataToDisplay.filter(s => s.status_inscricao === 'lista_espera').length,
-    comFoto: dataToDisplay.filter(s => s.foto_url).length,
-    pagamentoPendente: dataToDisplay.filter(s => s.status_pagamento === 'pendente' || s.status_pagamento === 'nao_pago').length,
   };
 
   return (
@@ -172,7 +132,7 @@ const Surfistas = () => {
             <div className="flex items-center space-x-3">
               <div className="flex items-center space-x-2">
                 <Waves className="h-5 w-5 text-ocean-600" />
-                <span className="font-medium">Total: {stats.total} surfistas</span>
+                <span className="font-medium">Total: {surfistas?.length || 0} surfistas</span>
               </div>
               <Button onClick={() => handleExport('pdf')} variant="outline" size="sm">
                 <Download className="mr-2 h-4 w-4" />
@@ -180,83 +140,6 @@ const Surfistas = () => {
               </Button>
             </div>
           </div>
-
-          {/* Cards de Estatísticas */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6 mb-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Confirmados</CardTitle>
-                <UserCheck className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{stats.confirmados}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-                <Clock className="h-4 w-4 text-yellow-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">{stats.pendentes}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Lista de Espera</CardTitle>
-                <AlertCircle className="h-4 w-4 text-orange-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-600">{stats.listaEspera}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Com Foto</CardTitle>
-                <Camera className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{stats.comFoto}</div>
-                <p className="text-xs text-muted-foreground">
-                  {Math.round((stats.comFoto / stats.total) * 100) || 0}% do total
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pagamento Pendente</CardTitle>
-                <AlertCircle className="h-4 w-4 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">{stats.pagamentoPendente}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Média de Idade</CardTitle>
-                <Waves className="h-4 w-4 text-ocean-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-ocean-600">
-                  {Math.round(dataToDisplay.reduce((acc, curr) => acc + (curr.idade || 0), 0) / (dataToDisplay.length || 1)) || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">anos</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Filtros */}
-          {!isLoading && surfistas && (
-            <SurfistasFilters 
-              data={dadosProcessados}
-              onFilteredDataChange={setFilteredData}
-            />
-          )}
           
           <div className="mb-6">
             {isLoading ? (
@@ -266,15 +149,10 @@ const Surfistas = () => {
             ) : (
               <DataTable 
                 title="Lista de Surfistas"
-                data={dataToDisplay}
+                data={dadosProcessados}
                 columns={[
                   { accessor: 'nome_surfista', header: 'Nome' },
                   { accessor: 'idade', header: 'Idade' },
-                  { 
-                    accessor: 'status_inscricao', 
-                    header: 'Status',
-                    cell: (value) => getStatusBadge(value)
-                  },
                   { 
                     accessor: 'telefone_surfista', 
                     header: 'WhatsApp',
@@ -297,11 +175,6 @@ const Surfistas = () => {
                     )
                   },
                   { 
-                    accessor: 'status_pagamento', 
-                    header: 'Pagamento',
-                    cell: (value) => getPaymentStatusBadge(value)
-                  },
-                  { 
                     accessor: 'tamanho_camiseta_surfista', 
                     header: 'Camiseta',
                     cell: (value) => (
@@ -310,37 +183,41 @@ const Surfistas = () => {
                       </Badge>
                     )
                   },
+                  { 
+                    accessor: 'escola_serie_ano', 
+                    header: 'Escola/Série',
+                  },
                 ]}
                 detailFields={[
-                  { label: "Nome", accessor: "nome_surfista" },
-                  { label: "Idade", accessor: "idade" },
-                  { label: "Status", accessor: "status_inscricao" },
-                  { label: "Telefone", accessor: "telefone_surfista" },
-                  { label: "Status Pagamento", accessor: "status_pagamento" },
-                  { label: "Tamanho Camiseta", accessor: "tamanho_camiseta_surfista" }
+                  { label: 'Nome', accessor: 'nome_surfista' },
+                  { label: 'Data de Nascimento', accessor: 'data_nascimento', 
+                    render: (value) => new Date(value).toLocaleDateString('pt-BR') },
+                  { label: 'Idade', accessor: 'idade' },
+                  { label: 'WhatsApp', accessor: 'telefone_surfista' },
+                  { label: 'Instagram', accessor: 'arroba_instagram',
+                    render: (value, row) => row.tem_instagram ? value : 'Não possui' },
+                  { label: 'Escola/Série', accessor: 'escola_serie_ano' },
+                  { label: 'Tamanho da Camiseta', accessor: 'tamanho_camiseta_surfista' },
+                  { label: 'Toca Instrumento', accessor: 'toca_instrumento', 
+                    render: (value, row) => value ? `Sim (${row.instrumento_qual})` : 'Não' },
+                  { label: 'Tem Irmãos', accessor: 'tem_irmaos',
+                    render: (value, row) => value ? `Sim (${row.quantidade_irmaos})` : 'Não' },
+                  { label: 'Toma Medicamento', accessor: 'toma_medicamento_continuo',
+                    render: (value, row) => value ? `Sim (${row.medicamento_qual})` : 'Não' },
+                  { label: 'Tem Alergia', accessor: 'tem_alergia',
+                    render: (value, row) => value ? `Sim (${row.alergia_qual})` : 'Não' },
+                  { label: 'Tem Fobia', accessor: 'tem_fobia',
+                    render: (value, row) => value ? `Sim (${row.fobia_qual})` : 'Não' },
+                  { label: 'Fez Primeira Comunhão', accessor: 'fez_primeira_comunhao',
+                    render: (value) => value ? 'Sim' : 'Não' },
+                  { label: 'Fez Crisma', accessor: 'fez_crisma',
+                    render: (value) => value ? 'Sim' : 'Não' }
                 ]}
                 onExport={handleExport}
                 onDelete={handleDelete}
               />
             )}
           </div>
-
-          {/* Sheet de Detalhes */}
-          <SurfistaDetailSheet
-            surfista={selectedSurfista}
-            isOpen={detailSheetOpen}
-            onOpenChange={setDetailSheetOpen}
-            onUpdate={() => {
-              refetch();
-              // Atualizar dados filtrados se necessário
-              if (filteredData.length > 0) {
-                const updatedFiltered = filteredData.map(item => 
-                  item.id === selectedSurfista?.id ? { ...selectedSurfista, ...item } : item
-                );
-                setFilteredData(updatedFiltered);
-              }
-            }}
-          />
         </main>
       </div>
     </div>
