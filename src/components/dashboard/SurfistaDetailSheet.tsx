@@ -29,7 +29,7 @@ const SurfistaDetailSheet = ({ surfista, isOpen, onOpenChange, onUpdate }: Surfi
   };
 
   const renderBooleanField = (value: string, trueText: string, falseText: string = 'Não') => {
-    if (value === 'Sim' || value === 'sim' || value === true || value === 'true') {
+    if (value === 'Sim' || value === 'sim') {
       return <Badge variant="outline" className="bg-green-50 text-green-800">{trueText}</Badge>;
     }
     return <Badge variant="outline" className="bg-gray-50 text-gray-600">{falseText}</Badge>;

@@ -25,6 +25,7 @@ type Surfista = {
   status_pagamento: string;
   foto_url: string;
   comprovante_url: string;
+  idade?: number; // Make it optional since it's calculated
   // ... outros campos
 };
 
@@ -120,8 +121,8 @@ const Surfistas = () => {
   };
 
   // Função para abrir detalhes do surfista
-  const handleViewDetails = (surfista: Surfista) => {
-    setSelectedSurfista(surfista);
+  const handleViewDetails = (row: any) => {
+    setSelectedSurfista(row);
     setDetailSheetOpen(true);
   };
 
@@ -243,7 +244,7 @@ const Surfistas = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-ocean-600">
-                  {Math.round(dataToDisplay.reduce((acc, curr) => acc + curr.idade, 0) / (dataToDisplay.length || 1)) || 0}
+                  {Math.round(dataToDisplay.reduce((acc, curr) => acc + (curr.idade || 0), 0) / (dataToDisplay.length || 1)) || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">anos</p>
               </CardContent>

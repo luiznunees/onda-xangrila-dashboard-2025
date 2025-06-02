@@ -8,22 +8,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
 
 interface MultiSelectFilterProps {
-  title: string;
   options: { value: string; label: string }[];
   selectedValues: string[];
   onSelectionChange: (values: string[]) => void;
   placeholder?: string;
+  label?: string;
 }
 
 const MultiSelectFilter = ({
-  title,
   options,
   selectedValues,
   onSelectionChange,
-  placeholder = "Selecionar..."
+  placeholder = "Selecionar...",
+  label
 }: MultiSelectFilterProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -53,7 +52,7 @@ const MultiSelectFilter = ({
 
   return (
     <div className="flex flex-col space-y-2">
-      <label className="text-sm font-medium">{title}</label>
+      {label && <label className="text-sm font-medium">{label}</label>}
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
           <Button
