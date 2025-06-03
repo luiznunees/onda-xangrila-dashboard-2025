@@ -14,19 +14,25 @@ import { Badge } from "@/components/ui/badge";
 import StatusSelect from "@/components/dashboard/StatusSelect";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// Interface local que corresponde exatamente aos dados do Supabase
+// Interface que corresponde aos dados do Supabase
 interface SurfistaData {
   id: string;
   nome_surfista: string;
-  idade: number;
-  escola_serie_ano: string;
-  tamanho_camiseta_surfista: string;
+  idade?: number;
+  escola_serie_ano?: string;
+  tamanho_camiseta_surfista?: string;
   status_inscricao?: string;
   status_pagamento?: string;
   tipo_pagamento?: string;
   created_at: string;
   updated_at?: string;
+  telefone_surfista?: string;
+  telefone_pai?: string;
+  telefone_mae?: string;
+  fez_primeira_comunhao?: string;
+  fez_crisma?: string;
   // Todos os outros campos do Supabase
   alergia?: string;
   arroba_instagram?: string;
@@ -54,6 +60,13 @@ interface SurfistaData {
   anos_participacao?: string;
   como_conheceu?: string;
   expectativas?: string;
+}
+
+// Interface para compatibilidade com DataTable
+interface Column {
+  accessor: string;
+  header: string;
+  cell?: (props: { row: { original: SurfistaData } }) => React.ReactNode;
 }
 
 const Surfistas = () => {
@@ -175,25 +188,25 @@ const Surfistas = () => {
   };
 
   // Definir colunas para a tabela
-  const columns = [
+  const columns: Column[] = [
     {
-      accessorKey: 'nome_surfista',
+      accessor: 'nome_surfista',
       header: 'Nome do Surfista',
     },
     {
-      accessorKey: 'idade',
+      accessor: 'idade',
       header: 'Idade',
     },
     {
-      accessorKey: 'escola_serie_ano',
+      accessor: 'escola_serie_ano',
       header: 'Escola/Série',
     },
     {
-      accessorKey: 'tamanho_camiseta_surfista',
+      accessor: 'tamanho_camiseta_surfista',
       header: 'Camiseta',
     },
     {
-      accessorKey: 'status_inscricao',
+      accessor: 'status_inscricao',
       header: 'Status Inscrição',
       cell: ({ row }: { row: { original: SurfistaData } }) => (
         <StatusSelect
@@ -204,7 +217,7 @@ const Surfistas = () => {
       ),
     },
     {
-      accessorKey: 'status_pagamento',
+      accessor: 'status_pagamento',
       header: 'Status Pagamento',
       cell: ({ row }: { row: { original: SurfistaData } }) => (
         <StatusSelect
@@ -215,7 +228,7 @@ const Surfistas = () => {
       ),
     },
     {
-      accessorKey: 'tipo_pagamento',
+      accessor: 'tipo_pagamento',
       header: 'Tipo Pagamento',
       cell: ({ row }: { row: { original: SurfistaData } }) => {
         const tipo = row.original.tipo_pagamento;
@@ -228,13 +241,13 @@ const Surfistas = () => {
       },
     },
     {
-      accessorKey: 'created_at',
+      accessor: 'created_at',
       header: 'Data da Inscrição',
       cell: ({ row }: { row: { original: SurfistaData } }) => 
         new Date(row.original.created_at).toLocaleDateString('pt-BR'),
     },
     {
-      id: 'actions',
+      accessor: 'actions',
       header: 'Ações',
       cell: ({ row }: { row: { original: SurfistaData } }) => (
         <Button
@@ -277,6 +290,20 @@ const Surfistas = () => {
       <Sidebar />
       <div className="flex-1 overflow-auto">
         <main className="container py-6">
+          <Alert className="mb-6 border-orange-200 bg-orange-50">
+            <AlertDescription className="text-orange-800">
+              🚧 <strong>Site em atualização!</strong> Site provisório: 
+              <a 
+                href="https://onda-xangrila-dashboards-view.lovable.app/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="ml-1 underline hover:text-orange-600"
+              >
+                https://onda-xangrila-dashboards-view.lovable.app/
+              </a>
+            </AlertDescription>
+          </Alert>
+
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Surfistas</h1>

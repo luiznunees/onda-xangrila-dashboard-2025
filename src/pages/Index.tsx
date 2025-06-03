@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Users, Calendar, Waves, LifeBuoy, Crown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Sidebar from '@/components/dashboard/Sidebar';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Index = () => {
   return (
@@ -11,6 +12,20 @@ const Index = () => {
       <Sidebar />
       <div className="flex-1 overflow-auto">
         <main className="container py-6">
+          <Alert className="mb-6 border-orange-200 bg-orange-50">
+            <AlertDescription className="text-orange-800">
+              🚧 <strong>Site em atualização!</strong> Site provisório: 
+              <a 
+                href="https://onda-xangrila-dashboards-view.lovable.app/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="ml-1 underline hover:text-orange-600"
+              >
+                https://onda-xangrila-dashboards-view.lovable.app/
+              </a>
+            </AlertDescription>
+          </Alert>
+
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">
